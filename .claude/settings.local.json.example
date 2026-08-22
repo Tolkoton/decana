@@ -1,0 +1,22 @@
+{
+  "_comment": "Copy this file to .claude/settings.local.json and keep only the section(s) for your stack. settings.local.json is gitignored — it's per-machine, per-project override, never committed.",
+
+  "_python": {
+    "_comment": "Python projects: set PYTHONPYCACHEPREFIX to keep __pycache__ out of source dirs.",
+    "env": {
+      "PYTHONPYCACHEPREFIX": ".cache/pycache"
+    }
+  },
+
+  "_javascript": {
+    "_comment": "JS/TS projects: nothing extra needed by default — npm/yarn/pnpm add/remove are already in .claude/settings.json's ask list.",
+    "env": {}
+  },
+
+  "_rust": {
+    "_comment": "Rust projects: CARGO_TARGET_DIR keeps build artifacts out of the working tree if you build outside target/.",
+    "env": {
+      "CARGO_TARGET_DIR": ".cache/cargo-target"
+    }
+  }
+}

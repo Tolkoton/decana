@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment_philosophy": "Bulk-allow safe tool families, hard-deny catastrophic patterns, ask only for shared-state changes. The deny list does the security work; the allow list is broad on purpose. To tighten, narrow allow and/or expand deny.",
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "~/.claude/",
+      "~/.claude/skills/",
+      "~/.claude/agents/",
+      "~/.claude/commands/",
+      "~/.claude/output-styles/",
+      "~/.config/claude/",
+      "/tmp/claude/"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/*)",
+      "Bash(rm -rf .)",
+      "Bash(rm -rf ./*)",
+      "Bash(rm -rf $HOME*)",
+      "Bash(rm -fr *)",
+      "Bash(rm --recursive *)",
+      "Bash(rm -r /*)",
+      "Bash(rm -r ~)",
+      "Bash(sudo:*)",
+      "Bash(dd if=*of=/dev/*)",
+      "Bash(mkfs*)",
+      "Bash(shred *)",
+      "Bash(wipefs *)",
+      "Bash(chmod 777 *)",
+      "Bash(chmod -R 777 *)",
+      "Bash(chown -R *)",
+      "Bash(git commit*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git push --force-with-lease *)",
+      "Bash(git reset --hard origin*)",
+      "Bash(git reset --hard HEAD~*)",
+      "Bash(git clean -fdx*)",
+      "Bash(git clean -fX*)",
+      "Bash(git filter-branch *)",
+      "Bash(git update-ref -d *)",
+      "Bash(curl *| sh*)",
+      "Bash(curl *| bash*)",
+      "Bash(curl *| zsh*)",
+      "Bash(curl *|sh*)",
+      "Bash(curl *|bash*)",
+      "Bash(wget *| sh*)",
+      "Bash(wget *| bash*)",
+      "Bash(wget *|sh*)",
+      "Bash(wget *|bash*)",
+      "Bash(twine upload*)",
+      "Bash(uv publish*)",
+      "Bash(poetry publish*)",
+      "Bash(python -m twine upload*)",
+      "Bash(npm publish*)",
+      "Bash(yarn publish*)",
+      "Bash(pnpm publish*)",
+      "Bash(cargo publish*)",
+      "Bash(gem push*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(./secrets/**)",
+      "Read(**/secrets/**)",
+      "Read(./**/id_rsa)",
+      "Read(./**/id_rsa.pub)",
+      "Read(./**/id_ed25519)",
+      "Read(./**/id_ed25519.pub)",
+      "Read(./**/.aws/credentials)",
+      "Read(./**/.aws/config)",
+      "Read(./**/.ssh/**)",
+      "Read(./**/.gnupg/**)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/*.p12)",
+      "Read(./**/*.pfx)",
+      "Read(./**/credentials.json)",
+      "Read(./**/service-account*.json)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Edit(**/.env)",
+      "Edit(**/.env.*)",
+      "Edit(./secrets/**)",
+      "Edit(**/secrets/**)",
+      "Edit(./**/*.pem)",
+      "Edit(./**/*.key)",
+      "Edit(./**/.ssh/**)",
+      "Write(./.env)",
+      "Write(./.env.*)",
+      "Write(**/.env)",
+      "Write(**/.env.*)",
+      "Write(./secrets/**)",
+      "Write(**/secrets/**)",
+      "Edit(./alembic.ini)",
+      "Edit(./migrations/**)",
+      "Edit(**/migrations/**)",
+      "Edit(./alembic/versions/**)",
+      "Edit(**/alembic/versions/**)",
+      "Write(./migrations/**)",
+      "Write(**/migrations/**)",
+      "Edit(./.git/**)",
+      "Edit(**/.git/**)",
+      "Write(./.git/**)",
+      "Write(**/.git/**)",
+      "Edit(./.github/workflows/**)",
+      "Edit(**/.github/workflows/**)",
+      "Write(./.github/workflows/**)",
+      "Write(**/.github/workflows/**)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git push)",
+      "Bash(git rebase:*)",
+      "Bash(git merge:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git revert:*)",
+      "Bash(uv add:*)",
+      "Bash(uv remove:*)",
+      "Bash(poetry add:*)",
+      "Bash(poetry remove:*)",
+      "Bash(pip install:*)",
+      "Bash(pip uninstall:*)",
+      "Bash(pipx install:*)",
+      "Bash(pipx uninstall:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(yarn add:*)",
+      "Bash(yarn remove:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(docker push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh release:*)",
+      "Bash(gh repo create:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(cargo add:*)",
+      "Bash(cargo remove:*)",
+      "Bash(go get:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(gem install:*)",
+      "Bash(bundle add:*)",
+      "Bash(bundle remove:*)"
+    ],
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Task",
+      "TodoWrite",
+      "NotebookEdit",
+      "NotebookRead"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-dangerous.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-paths.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "WebFetch|WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-approve-web.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "WebFetch|WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-approve-web.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/format-on-edit.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/verify-on-stop.sh\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/overseer_stop.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '## git status'; git -C \"$CLAUDE_PROJECT_DIR\" status --short 2>/dev/null | head -20; echo; echo '## recent commits'; git -C \"$CLAUDE_PROJECT_DIR\" log --oneline -5 2>/dev/null; echo; echo '## branch'; git -C \"$CLAUDE_PROJECT_DIR\" branch --show-current 2>/dev/null"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-5",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-haiku-4-5-20251001",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "claude-sonnet-5",
+    "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP": "30"
+  }
+}

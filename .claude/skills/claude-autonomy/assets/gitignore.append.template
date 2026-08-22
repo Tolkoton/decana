@@ -1,0 +1,5 @@
+# --- Claude Code (added by claude-autonomy skill) ---
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/audit.log
+.claude/tmp/
