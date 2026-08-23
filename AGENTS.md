@@ -1,4 +1,4 @@
-# Agents guide — Decana
+# Agents guide — <project name>
 
 > Copy this file into your project root, then fill in the sections below.
 > Remove this instruction line when done.
