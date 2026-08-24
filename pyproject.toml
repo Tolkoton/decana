@@ -1,0 +1,47 @@
+[project]
+name = "decana"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Myron Leskiv", email = "dimmw@yahoo.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.5.2",
+    "soxr>=1.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "ruff>=0.16.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+# .claude/hooks/ is harness code owned by the human, not slice code. It carries
+# pre-existing findings (BLE001, PLW1510, FURB177); linting it here would block
+# every turn via the Stop hook over code this slice must not touch.
+extend-exclude = [".claude"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+# Same reasoning as the ruff exclude: the Stop hook runs bare `mypy .`, which
+# would otherwise walk .claude/hooks/ under strict mode.
+files = ["src", "scripts"]
+
+# soxr ships no py.typed marker and no stubs (verified against soxr 1.1.0).
+# Scoped to this one module rather than set globally, so a genuinely untyped
+# import anywhere else still fails the type check.
+[[tool.mypy.overrides]]
+module = ["soxr", "soxr.*"]
+ignore_missing_imports = true
