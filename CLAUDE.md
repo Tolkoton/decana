@@ -72,10 +72,23 @@ The Stop hook runs `ruff check`, `mypy`, and `pytest` (only on Python changes). 
 | `block-dangerous.sh` | Before any Bash | Hard-blocks destructive patterns AND `git commit` |
 | `protect-paths.sh` | Before Edit/Write/MultiEdit | Hard-blocks edits to secrets, migrations, `.git/`, workflows |
 | `format-on-edit.sh` | After Edit/Write/MultiEdit | Runs `ruff format` + `ruff check --fix --select I` on `.py` files |
-| `verify-on-stop.sh` | On turn end | Runs lint/typecheck/tests on changed Python; blocks turn if any fail |
+| `verify-on-stop.sh` | On turn end | Runs lint/typecheck/tests on changed Python; blocks turn if any fail. **TDD RED gate:** `=== TDD RED ===` alone on its own line in the final message skips the TEST step only — lint and typecheck still run and still block. See below. |
 | `overseer_stop.py` | On turn end | On a unit-completion claim (sentinel + `src/` edit + test/lint/type run), injects an `OVERSEER_REQUEST` 12-check audit prompt. See "Overseer protocol" below. |
 
 To inspect a hook: `cat .claude/hooks/<name>`. To temporarily disable: rename to `<name>.disabled` or pass `claude --disable-hooks` flag.
+
+### TDD RED gate (`=== TDD RED ===`)
+
+A strict-TDD RED turn ends on a deliberately failing test. Without a gate, `verify-on-stop.sh` blocks every such turn and forces RED and GREEN to collapse into one — destroying the review checkpoint between writing a test and implementing it.
+
+End a RED turn with `=== TDD RED ===` alone on its own line to skip the test step for that turn.
+
+- **Skips the TEST step ONLY.** `ruff` and `mypy` still run and still block.
+- **Does not** suppress the overseer audit hook — separate hook, separate triggers.
+- **One turn only.** Re-emit it each RED turn; absence restores full enforcement.
+- **Do not emit it on a GREEN, refactor, or question-answering turn** — same discipline as the `=== UNIT N COMPLETE ===` sentinel, and the opposite failure: that one triggers a spurious audit, this one waves through a broken suite.
+
+**Known limit:** nothing verifies that a turn claiming RED actually produced a failing test — the bypass has no counterparty. It rests on honesty, which is an acceptable trade for one skipped step and no others. Before widening the skip to lint, typecheck, or a test subset, build the two-signal trigger (sentinel AND structural tool evidence) that `overseer_stop.py` already uses. Rationale and verification: `.claude/overseer/escalations.md`, 2026-08-25 TOOLING_DECISION. Note both `.claude/hooks/` and `~/.claude/hooks/` copies carry the gate; the latter is outside this repo and invisible to `git diff`.
 
 <!-- ============================================== -->
 <!-- End of autonomy policy. Your implementation skill -->

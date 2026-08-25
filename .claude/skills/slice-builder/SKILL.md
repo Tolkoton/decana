@@ -1,6 +1,6 @@
 ---
 name: slice-builder
-description: Build ONE isolated testable logical piece (a "thin slice") of a larger system using strict per-test TDD (RED→GREEN→REFACTOR), paranoid-SRP (one method = one responsibility; multi-responsibility logic becomes a flow method orchestrating helpers), seam-first design, and dependency injection. Use this skill WHENEVER the user asks to "implement a small piece", "add a thin slice", "build the upload module", "build piece N of the pipeline", "wrap this API in a clean function", or otherwise wants controlled incremental progress on a known integration without architecture overhead. Output is one production module + integration tests derived from the method's distinct behaviors + one manual smoke script + a PROGRESS.md entry. STOPS at every TDD transition. DO NOT use for greenfield architecture (→ master-architect), splitting oversized multi-file features (→ feature-architect), unknown-API exploration (→ spike, no skill), or single-file edits (→ user edits directly).
+description: Build ONE isolated testable logical piece (a "thin slice") of a larger system using strict per-test TDD (RED→GREEN→REFACTOR), paranoid-SRP (one method = one responsibility; multi-responsibility logic becomes a flow method orchestrating helpers), seam-first design, and dependency injection. Use this skill WHENEVER the user asks to "implement a small piece", "add a thin slice", "build the upload module", "build piece N of the pipeline", "wrap this API in a clean function", or otherwise wants controlled incremental progress on a known integration without architecture overhead. Output is one production module + integration tests derived from the method's distinct behaviors + one manual smoke script + a PROGRESS.md entry. STOPS at scope, seam, behavior-list and smoke checkpoints — not at TDD transitions inside an approved behavior list. DO NOT use for greenfield architecture (→ master-architect), splitting oversized multi-file features (→ feature-architect), unknown-API exploration (→ spike, no skill), or single-file edits (→ user edits directly).
 ---
 
 # Slice Builder
@@ -136,13 +136,13 @@ Behaviors of upload_to_folder:
 ### Step 4 — TDD per behavior (one cycle per behavior)
 
 For each behavior Bn in order:
-- **RED**: Write ONE test for Bn. Run pytest. Show failing output. **STOP.**
-- **GREEN**: Minimal implementation to make Bn pass without breaking earlier behaviors. Run pytest (full slice suite). Show all green. **STOP.**
-- **REFACTOR**: Clean. If SRP rule 4 says a flow needs splitting into helpers — do it here. Run pytest. Still green. **STOP.**
+- **RED**: Write ONE test for Bn. Run pytest. Show failing output.
+- **GREEN**: Minimal implementation to make Bn pass without breaking earlier behaviors. Run pytest (full slice suite). Show all green.
+- **REFACTOR**: Clean. If SRP rule 4 says a flow needs splitting into helpers — do it here. Run pytest. Still green.
 
-Do NOT advance to Bn+1 until Bn is green AND refactored AND the user has seen the output. Resist chaining.
+The order is strict: never write Bn's implementation before its test, and never start Bn+1 before Bn is green AND refactored. But the whole cycle runs in **one turn**, and you continue to Bn+1 without stopping — the behavior list was the gate, and the owner already passed it at Step 3. Show every transition's pytest output in the transcript regardless; it is read afterwards. See "The gate is the behavior list, not the cadence" under Stop discipline.
 
-If during a cycle you discover a behavior was missing from the list, STOP and ask the user to amend the list — don't sneak it in.
+**If during a cycle you discover a behavior was missing from the list, STOP and ask the user to amend the list — don't sneak it in.** This is the one boundary chaining never crosses, and the reason the rest of Step 4 can run unattended.
 
 ### Step 5 — Smoke script
 
@@ -200,6 +200,44 @@ STOP and ESCALATE to **`master-architect`** (or pause and discuss with the owner
 
 In both cases, do NOT continue the slice. Tell the user what you found and which skill to invoke. Leave the partial work as-is (or revert, user's call).
 
+## Escalation calibration — decide, or stop?
+
+The section above says when to leave the slice. This one says how often to interrupt the owner while staying in it. Both halves are load-bearing; a slice that stops on everything wastes the owner, and a slice that stops on nothing loses the checkpoints.
+
+This is Constitution Article 5 at slice altitude, not a new rule: *"If reversing the decision later would be cheap, it is a two-way door → automate it."* Over-escalating is a failure to apply Article 5, not an excess of caution.
+
+**The test.** If resolving it needs product or market context you don't have, or if being wrong would cost more than one commit to undo — stop. Otherwise decide.
+
+### Decide alone, fold in, report in one line
+
+- A choice local to one module that a single commit could reverse.
+- A choice derivable from a precedent already recorded in this repo.
+- Test-plan mechanics — fixture shape, spy vs real dependency, keeping or dropping a pass-on-arrival test — **provided the assertion set is unchanged**. Changing what a test asserts is not mechanics.
+- Anything where you would write "I lean toward X" and X follows from a rule already written down. If you can cite the rule, you are not asking a question; you are narrating.
+
+Report it as: **"Decided X because Y; overrule if you disagree."** One line. The owner keeps the veto without spending a turn.
+
+> **HARD CONDITION — the fold-in happens in the same turn as the implementation.**
+> Deciding alone is *conditional* on this. If the record lags the decision, the project loses the stop AND the record, and is strictly worse off than before the calibration. This is the standing correction from `escalations.md` (2026-08-24T20:18:01Z): *chat ratification authorises writing the change into the artifact — it is not itself the record.* Fold in without waiting to be asked. A decision made alone and recorded next turn is a violation, not a delay.
+
+### Escalate, without exception
+
+No balancing test applies to these. They are not weighed against the cost of a turn.
+
+- Any change to text **already ratified** in the slice artifact.
+- Anything that changes **what the exit criterion asserts, or how it is measured**.
+- Anything touching the **evidence log's integrity** — it is the slice's only proof, and a corrupted one is undetectable after the fact.
+- A **falsified premise** (Article 8) — lower-level facts outrank higher-level assumptions, and the routing is the owner's.
+- The slice's **hard-to-undo set**, named during planning.
+- Any change to **the hooks, the overseer, or anything else that audits your own work** — Article 7. Self-modification is human-ratified and recorded in `audit.md`, in that order.
+- A **verification with no available oracle**. Say so plainly when that is the situation: the mu-law reference table was the right stop, because transcription error was the live risk and a second independent derivation was the only possible check.
+
+### Why these two lists and not others
+
+Derived from recorded signal, not preference. Across the 9 escalations logged for `voice-intake-demo`, all resolved immediately; 6 took the stated recommendation unchanged. The exceptions are the whole point: the single **reversal** (2026-08-23T16:27:00Z, clock ownership) amended ratified seam text, and the two entries where the implementer **declined to recommend at all** touched the ratified seam plus the exit criterion's measurement basis, and the creation of the first ADR directory. The classes where the owner's input actually changed the outcome are exactly the escalate list above. See `.claude/overseer/audit.md`, 2026-08-25.
+
+This is not "escalate less." It is escalate where the record shows it changes something, and decide where the record shows it never did.
+
 ## What you DO NOT do
 
 - Write to `.claude/architecture/` (that's `master-architect` / `feature-architect` territory)
@@ -237,3 +275,21 @@ The word **STOP** in this workflow is literal. After each step that says STOP:
 3. Do not "helpfully" continue to the next step
 
 Resist the urge to chain steps. Each STOP is a checkpoint where the user can redirect cheaply. Without STOPs, the slice quietly drifts away from the seam.
+
+### The gate is the behavior list, not the cadence
+
+**Once the owner has approved a behavior list for a seam (Step 3), run each behavior RED→GREEN→REFACTOR in one turn, then continue to the next behavior in that list without stopping.** Step 4's per-transition STOPs do not apply inside an approved list.
+
+Keep writing the RED output to the transcript and keep the `=== TDD RED ===` sentinel when a turn genuinely ends red. They are read afterwards; the owner does not need to be present for them.
+
+**Chaining is licensed *within* an approved behavior list. It is never licensed across one.** Do not invent a behavior mid-flight, do not extend the list, do not begin a seam whose list the owner has not seen. If a cycle reveals a missing behavior, Step 4 already says it: STOP and ask for the list to be amended. That boundary — not the cadence — is what prevents unreviewed judgment at speed.
+
+Why the gate sits there: the owner's input has repeatedly changed the outcome at the behavior-list stage (Q18's `stage` field, G4's retention, Q8's reference-table provenance, Q14's exception type) and has never once changed it at a RED→GREEN transition. The GREEN→REFACTOR stop is weaker still — the suite is already green, so the refactor either holds it green or does not, visibly, in seconds. Full evidence and ratification: `.claude/overseer/audit.md`, 2026-08-25 "Stop-discipline narrowing".
+
+### What still stops
+
+- Everything in **Escalate, without exception** above.
+- **Genuine failure, not milestones.** A test that fails for a reason its behavior did not predict; a falsified premise (Article 8); an assertion you cannot make hold as specified. Stop for surprises.
+- **Not success.** Do not spend a turn reporting that a cycle went green. "It works, here's the count" is a line in the next report, not a turn.
+
+The STOPs outside Step 4 — Step 0's scope validation, Step 1's docs report, Step 2's skeleton, Step 3's behavior-list approval, Step 5's smoke verification — are untouched. Those are where the owner's judgment is load-bearing.

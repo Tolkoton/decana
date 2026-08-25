@@ -29,6 +29,87 @@ ADR_RATIFICATION escalation and the human's resolution. Used in the
 
 ---
 
+## 2026-08-26T00:00:00Z — ADR_RATIFICATION — voice-intake-demo
+- **Question:** An overseer #1 audit found the Exit criterion's unit-suite half names four literal test functions as its proof, and three do not exist: `test_audio_frame_error_resilience` in no form, `test_mulaw_codec_reference_table` and `test_timing_recorder_event_stream_integrity` only as five and four prefixed variants. Seam 4 as built (16 behaviors across `decode_base64_frame`, `start()`, both handlers, `close()`) is also far broader than its name. How should the criterion be reconciled with the 36-test suite?
+- **Options offered:** A) Fold in — replace the four names with the seam labels plus their actual test-name prefixes. B) Rename the 36 tests in code to match the artifact's four names, collapsing each seam into one function. C) other.
+- **Recommendation:** A, on the grounds that the four names were seam labels written before any test existed, while the per-behavior split was itself ratified (Seam 2's amendment, Seam 4's 16-behavior list) — collapsing them back under B would destroy ratified granularity to satisfy a naming convention the artifact never argued for.
+- **Human chose:** **A, with one change that is the substantive part of this entry: do not write test-name prefixes into the criterion either.** Owner's reasoning, recorded because it generalizes: prefixes are "the same defect one degree weaker. Any future test rename or split breaks the criterion again, and we will be back here. The criterion should assert a property, not a string match." The criterion now asserts that every behavior in each seam's ratified behavior list has a passing test and that no seam has tests beyond its list — pointing at the behavior lists, which the owner did ratify, rather than at test names, which were never ratified at all. Prefixes retained as a convenience note, explicitly not as proof. Owner separately directed the Seam 4 rename (to `BridgeSession` orchestration) and that the fold-in note about shared private forwarders be moved from the Seam 4 behavior-list section into "Decisions (with WHY)", since "a decision recorded in the wrong section is findable by grep and invisible to someone reading the decisions list — which is the only place a future reader looks."
+- **Latency to decision:** immediate.
+- **Notes:** Folded in as Q20 (re-filed forwarder decision) and Q21 (criterion reformulation + seam rename); Exit criterion item 1 and "What proves DONE" rewritten. **Applying the amendment immediately produced its first finding, which is the strongest evidence for it:** only Seam 4's behavior list is written into the artifact, so the criterion is verifiable for Seam 4 alone, and `tests/test_resampler.py` numbers its behaviors B1-B5 and **B7** — no B6, no record of what it was or whether it was cut. That is unresolvable by the implementer (reconstructing a ratified list from the tests it is meant to check is the tautology Q8 rejected, and B6 is not recoverable from the code at all), and is logged under "Open items requiring human decision". The pre-amendment criterion could not have surfaced it.
+
+## 2026-08-25T00:00:00Z — TOOLING_DECISION — voice-intake-demo
+
+- **Question:** `verify-on-stop.sh` blocks any turn that ends on a failing test
+  suite. A strict-TDD RED turn ends on a *deliberately* failing test, so the
+  hook fired on Seam 4's T3 RED and forced RED and GREEN into a single turn —
+  removing the checkpoint between "here is the test" and "here is the
+  implementation", which is the point where redirecting is still cheap. Should
+  the hook learn about RED turns, or should the checkpoint be given up?
+- **Options offered:**
+  (a) Leave it — accept RED+GREEN pairs per turn. The RED output is still shown
+      in the transcript, just without a pause to redirect.
+  (b) Teach the hook to skip the TEST step when the final message carries a
+      RED sentinel, restoring the checkpoint.
+- **Recommendation:** (b), on the grounds that a checkpoint you cannot stop at
+  is not a checkpoint, and the remaining 9 Seam-4 behaviors would each lose it.
+- **Human chose:** (b), with two conditions attached — log this escalation, and
+  write the bypass's missing counterparty into the hook comment as a known
+  limit.
+- **Latency to decision:** immediate, same turn.
+
+- **Why this is logged at all (human's stated reason, recorded verbatim in
+  substance):** this is a modification to *the enforcement mechanism that
+  audits my own work*, made mid-slice, under time pressure from a turn the
+  mechanism itself had blocked. That combination — self-modifying the auditor,
+  while the auditor is inconveniencing you — is the highest-trust edit in the
+  repo, and it must not exist only as a diff. The pressure to make the block go
+  away is exactly the pressure that should not be the thing deciding.
+
+- **WHAT THE SENTINEL CANNOT DO (the load-bearing half of this entry):**
+  - It skips **the test step only**. `ruff check` and `mypy` still run and
+    still block. A deliberately failing test must still be well-formed,
+    correctly typed code.
+  - It does **not** suppress the overseer audit hook, which is a separate hook
+    with separate triggers.
+  - It is scoped to one turn: the sentinel must be re-emitted each RED turn,
+    and absence of the sentinel restores full enforcement.
+  - Verified in both directions before being relied on (2026-08-25): with a
+    deliberately broken test present, sentinel → `TESTS SKIPPED`, exit 0, lint
+    and typecheck still executed; no sentinel → `{"decision":"block"}` carrying
+    the pytest failure. The probe test was then removed and the suite returned
+    to 57 passed.
+
+- **KNOWN LIMIT — the bypass has no counterparty (human-flagged, deliberately
+  not closed now):** nothing verifies that a turn claiming RED actually
+  produced a *failing test*. A turn that wrote no test, wrote a passing one, or
+  broke something unrelated receives the identical skip merely by emitting the
+  line. The obvious fix is the two-signal trigger `overseer_stop.py` already
+  uses (sentinel AND structural tool evidence in the same turn), and it was
+  consciously not built here. Until it is, the gate rests on the developer's
+  honesty about what kind of turn it is — an acceptable trade for one skipped
+  step and no others, and **not** acceptable if the skip is ever widened.
+  Recorded in the hook comment at the skip site in both copies so it is visible
+  to whoever is next tempted to widen it.
+
+- **Scope note:** two copies of this hook fire — `.claude/hooks/` (project,
+  configured-command path plus Python auto-detect) and `~/.claude/hooks/`
+  (user-level, auto-detect only). Both were edited; a gate in only one is no
+  gate. The user-level copy is outside this repo and will not appear in the
+  slice diff — flagged here because that is precisely the kind of change a
+  reviewer reading only `git diff` would never see.
+
+- **Implementation note:** the sentinel is read from the Stop envelope's
+  `last_assistant_message`, not by parsing the transcript JSONL. The transcript
+  is flushed asynchronously, so a hook parsing it races the writer
+  (anthropics/claude-code#15813) — `overseer_stop.py` hit exactly that and made
+  the same choice. The two hooks now agree on where turn text comes from.
+
+- **Notes:** category is TOOLING_DECISION, which is not one of the four the
+  format header lists. It is genuinely none of them — not a product decision,
+  not a blocker classification, not a design fork, not an ADR ratification —
+  and inventing a fifth label was preferred to filing it under a wrong one and
+  making the 2-week audit's category counts lie.
+
 ## 2026-08-24T20:18:01Z — ADR_RATIFICATION — voice-intake-demo
 - Question: The overseer's post-unit audit fired check #8 (chat-only design). Three interface contracts had entered the code with owner ratification given in chat but never written into the ratified artifact: (1) `InboundResampler`/`OutboundResampler` collapsed into one `Resampler(in_rate, out_rate)`; (2) `AudioFrameError` extended to cover `Resampler.push`; (3) `reject_partial_pcm16` promoted to public API of `codec.py`. The artifact described the old contract in four places (Seam signatures, Dependencies, Seam 2's test approach). Two questions: does this get folded in or does it justify the project's first ADR, and is it one decision or two?
 - Options offered: A) Fold in as Q12, correcting all four artifact locations; do not create `docs/adr/`. B) Create `docs/adr/` and write ADR-0001 for the seam-shape change.
