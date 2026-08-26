@@ -1,0 +1,1078 @@
+{
+  "spike": "gemini-live",
+  "slice": "S2",
+  "run_at": "2026-08-26T18:56:05.398162+00:00",
+  "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+  "sdk": "google-genai 2.20.0",
+  "C1_greeting_on_connect": {
+    "claim": "one text turn after setup, zero audio input -> model speaks",
+    "verdict": "PASS",
+    "first_audio_at_ms": 3231,
+    "audio_chunks": 139,
+    "total_audio_bytes": 311040,
+    "what_it_said": "Hello, thanks for calling. Are you looking to buy your first home, move house, remortgage, or perhaps buy to let?"
+  },
+  "C2_output_audio_format": {
+    "claim": "output is PCM16 mono 24 kHz (AudioChunk.pcm24k)",
+    "mime_type": "audio/pcm;rate=24000",
+    "verdict": "PASS",
+    "even_length": true
+  },
+  "event_log_greeting_turn": [
+    {
+      "at_ms": 2600,
+      "kind": "output_transcription",
+      "text": "Hello, thanks"
+    },
+    {
+      "at_ms": 3094,
+      "kind": "output_transcription",
+      "text": " for calling."
+    },
+    {
+      "at_ms": 3231,
+      "kind": "audio",
+      "bytes": 46080,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3231,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3286,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3287,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3288,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3288,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3436,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3436,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3436,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3437,
+      "kind": "output_transcription",
+      "text": " Are you"
+    },
+    {
+      "at_ms": 3438,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3438,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3438,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3439,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3521,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3522,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3522,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3522,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3606,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3607,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3608,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3608,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3737,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3737,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3738,
+      "kind": "output_transcription",
+      "text": " looking"
+    },
+    {
+      "at_ms": 3738,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3739,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3739,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3740,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3887,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3887,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3888,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3888,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3888,
+      "kind": "output_transcription",
+      "text": " to buy"
+    },
+    {
+      "at_ms": 3888,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3890,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3890,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3975,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3976,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3976,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 3977,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4062,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4063,
+      "kind": "output_transcription",
+      "text": " your first"
+    },
+    {
+      "at_ms": 4067,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4068,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4068,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4167,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4167,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4168,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4168,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4169,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4343,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4345,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4346,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4346,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4346,
+      "kind": "output_transcription",
+      "text": " home,"
+    },
+    {
+      "at_ms": 4347,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4347,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4348,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4348,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4428,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4428,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4429,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4429,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4560,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4561,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4561,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4561,
+      "kind": "output_transcription",
+      "text": " move"
+    },
+    {
+      "at_ms": 4561,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4563,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4564,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4708,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4709,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4709,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4709,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4710,
+      "kind": "output_transcription",
+      "text": " house,"
+    },
+    {
+      "at_ms": 4710,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4711,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4712,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4773,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4773,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4774,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4793,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4857,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4858,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4858,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4880,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4921,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4922,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4942,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4942,
+      "kind": "output_transcription",
+      "text": " remortgage,"
+    },
+    {
+      "at_ms": 4986,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 4986,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5005,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5048,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5048,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5069,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5135,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5135,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5136,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5198,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5199,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5200,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5241,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5242,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5283,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5284,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5304,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5347,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5347,
+      "kind": "output_transcription",
+      "text": " or"
+    },
+    {
+      "at_ms": 5348,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5367,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5455,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5456,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5457,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5457,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5476,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5476,
+      "kind": "output_transcription",
+      "text": " perhaps"
+    },
+    {
+      "at_ms": 5605,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5606,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5606,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5606,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5607,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5607,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5627,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5670,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5671,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5716,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5716,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5786,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5786,
+      "kind": "output_transcription",
+      "text": " buy to"
+    },
+    {
+      "at_ms": 5786,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5786,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5800,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5846,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5847,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5873,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5873,
+      "kind": "output_transcription",
+      "text": " let?"
+    },
+    {
+      "at_ms": 5903,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5904,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5928,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5965,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5965,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 5985,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 6029,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 6029,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 6049,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 6093,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 6093,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 6136,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 6136,
+      "kind": "audio",
+      "bytes": 1920,
+      "mime": "audio/pcm;rate=24000"
+    },
+    {
+      "at_ms": 9681,
+      "kind": "turn_complete"
+    }
+  ],
+  "caller_audio": {
+    "source": "a throwaway Live session asked to speak a fixed line",
+    "line": "Hi, I am looking to remortgage my flat in Manchester.",
+    "mime": "audio/pcm;rate=24000",
+    "bytes_24k": 407040,
+    "bytes_16k_after_project_resampler": 271360
+  },
+  "C3_transcription_events": {
+    "claim": "input_transcription and output_transcription both arrive, in order",
+    "verdict": "PASS",
+    "input_transcription_verdict": "PASS",
+    "input_transcription": "I CAN HELP WITH THAT REMORTGADING CAN BE A GOOD WAY TO GET BETTER TERMS ON YOUR MORTGAGE <SPOKEN_NOISE>",
+    "output_transcription_verdict": "PASS",
+    "output_transcription": "Hello, thanks for calling. Are you looking to buy your first home, move house, remortgage, or perhaps buy to let?",
+    "output_seen_in": "greeting turn",
+    "granularity": {
+      "note": "transcripts stream as FRAGMENTS, not whole utterances -- S2 must accumulate them into turns",
+      "input_fragments": 19,
+      "first_five_input_fragments": [
+        " I",
+        " CAN",
+        " HELP",
+        " WITH",
+        " THAT"
+      ]
+    }
+  },
+  "OPEN_not_a_premise": {
+    "observation": "the model never produced a reply turn to the fed audio: interrupted + turn_complete, then the receive stream ended",
+    "tried": [
+      "draining past the first turn_complete",
+      "pacing sends at 20 ms as Twilio does",
+      "send_realtime_input(audio_stream_end=True)"
+    ],
+    "most_likely": "the fixture, not the API: the 'caller' audio is Gemini's own synthesised voice speaking a broker-ish line, and the transcript carries <SPOKEN_NOISE> markers. A real human voice is what the tracer (feature step 4) feeds in.",
+    "why_it_does_not_block_S2": "the seam depends on the EVENTS existing and their ordering, all four of which are verified above; the conversational round-trip is the tracer's job, not this slice's."
+  },
+  "C4_sync_send_via_queue": {
+    "claim": "a sync callable can feed the async session through a queue + drain task",
+    "verdict": "PASS",
+    "frames_sent": 424
+  },
+  "event_log_caller_turn": [
+    {
+      "at_ms": 2185,
+      "kind": "input_transcription",
+      "text": " I"
+    },
+    {
+      "at_ms": 2342,
+      "kind": "input_transcription",
+      "text": " CAN"
+    },
+    {
+      "at_ms": 2499,
+      "kind": "input_transcription",
+      "text": " HELP"
+    },
+    {
+      "at_ms": 2657,
+      "kind": "input_transcription",
+      "text": " WITH"
+    },
+    {
+      "at_ms": 2811,
+      "kind": "input_transcription",
+      "text": " THAT"
+    },
+    {
+      "at_ms": 3505,
+      "kind": "input_transcription",
+      "text": " RE"
+    },
+    {
+      "at_ms": 3668,
+      "kind": "input_transcription",
+      "text": "MO"
+    },
+    {
+      "at_ms": 3811,
+      "kind": "input_transcription",
+      "text": "RTGA"
+    },
+    {
+      "at_ms": 3998,
+      "kind": "input_transcription",
+      "text": "DING"
+    },
+    {
+      "at_ms": 4154,
+      "kind": "input_transcription",
+      "text": " CAN"
+    },
+    {
+      "at_ms": 4310,
+      "kind": "input_transcription",
+      "text": " BE"
+    },
+    {
+      "at_ms": 4466,
+      "kind": "input_transcription",
+      "text": " A"
+    },
+    {
+      "at_ms": 4651,
+      "kind": "input_transcription",
+      "text": " GOOD"
+    },
+    {
+      "at_ms": 4807,
+      "kind": "input_transcription",
+      "text": " WAY"
+    },
+    {
+      "at_ms": 4966,
+      "kind": "input_transcription",
+      "text": " TO"
+    },
+    {
+      "at_ms": 5124,
+      "kind": "input_transcription",
+      "text": " GET"
+    },
+    {
+      "at_ms": 5314,
+      "kind": "input_transcription",
+      "text": " BETTER"
+    },
+    {
+      "at_ms": 5467,
+      "kind": "input_transcription",
+      "text": " TER"
+    },
+    {
+      "at_ms": 5503,
+      "kind": "input_transcription",
+      "text": "MS ON YOUR MORTGAGE <SPOKEN_NOISE>"
+    },
+    {
+      "at_ms": 6310,
+      "kind": "interrupted"
+    },
+    {
+      "at_ms": 6310,
+      "kind": "turn_complete"
+    }
+  ]
+}
