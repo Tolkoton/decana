@@ -9,3 +9,14 @@ __pycache__/
 venv/
 
 .claude/settings.local.json
+
+# Secrets. Never commit — the runtime reads these from the environment
+# (Settings.from_env), and the deployed service gets them from Cloud Run env.
+.env
+.env.*
+!.env.example
+
+# Overseer phase guard — per-session state, written by /plan-slice and cleared
+# when planning ends. Committing it would freeze one session's phase for everyone.
+.claude/overseer/state
+
