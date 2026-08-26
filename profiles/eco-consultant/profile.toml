@@ -1,0 +1,33 @@
+# DRAFT — owner to review before S7. This vertical exists to prove acceptance
+# criterion A4: swapping verticals is a directory swap plus one env var, with no
+# code change. Every value differs from mortgage-broker except the two model
+# names, which are a platform choice rather than a vertical one.
+
+[vertical]
+name = "Home energy assessment intake"
+
+[gemini]
+live_model = "gemini-2.5-flash-native-audio-preview-12-2025"
+analysis_model = "gemini-2.5-flash"
+
+[twilio]
+phone_number = "+442038900000"
+sms_sender_id = "EcoIntake"
+
+[operator]
+email = "surveys@example-eco.co.uk"
+
+[outcomes]
+allowed = ["survey_booked", "not_eligible", "callback_requested", "info_only"]
+
+# Two of the four outcomes send an SMS, and one of those carries two links —
+# partial coverage and multi-link templates are both ordinary, and both are
+# exercised here rather than only in synthetic fixtures.
+[sms.survey_booked]
+text = "Thanks for calling. Your home energy survey is booked here: {survey_url}. Grant eligibility in plain English: {grants_url}."
+survey_url = "https://calendly.com/example-eco/home-survey"
+grants_url = "https://www.gov.uk/improve-energy-efficiency"
+
+[sms.info_only]
+text = "As promised, here is the guide to home energy grants: {grants_url}."
+grants_url = "https://www.gov.uk/improve-energy-efficiency"

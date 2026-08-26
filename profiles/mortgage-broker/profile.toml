@@ -1,0 +1,27 @@
+# DRAFT — owner to review before S7. Every value here is placeholder content
+# chosen to be plausible, not real: the phone number, the operator address and
+# the booking link must all be replaced before a real client call.
+
+[vertical]
+name = "UK mortgage broker intake"
+
+[gemini]
+live_model = "gemini-2.5-flash-native-audio-preview-12-2025"
+analysis_model = "gemini-2.5-flash"
+
+[twilio]
+phone_number = "+441614960000"
+sms_sender_id = "Decana"
+
+[operator]
+email = "intake@example-broker.co.uk"
+
+[outcomes]
+allowed = ["new_client", "not_qualified", "callback_requested", "existing_client"]
+
+# Only one outcome sends an SMS. The other three are handled by the operator
+# brief alone — a profile that defines no template for an outcome sends nothing
+# for it, which is the intended behaviour, not an omission.
+[sms.new_client]
+text = "Thanks for calling. You can book your free mortgage review here: {booking_url}. Reply STOP to opt out."
+booking_url = "https://calendly.com/example-broker/mortgage-review"
