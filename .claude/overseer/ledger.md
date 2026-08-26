@@ -19,6 +19,12 @@ Categories follow Trajectory-Informed Memory Generation (arXiv 2603.10600):
 - **optimization** — inefficient pattern worth flagging next time
 - **none** — routine entry, no pattern of note
 
+## 2026-08-26T00:00:00Z — profile-loader — PLANNING_COMPLETE
+- Trigger: /plan-slice (driven by feature-architect, feature:vertical-profile-bridge S1 / tracer step 1)
+- Evidence: .claude/overseer/slice/profile-loader.md ; cold-reader CRITIC_PASS 2026-08-26 (5 notes applied once); feature artifact .claude/architecture/feature/vertical-profile-bridge.md amended 3× from this slice (DECANA_PROFILES_ROOT, display_name, validation list, S1 content wording)
+- Action: planning artifact written — 12 decisions, 5 hardest seams, 38 behavior ids expanding to a closed set of required pytest nodes; critic rounds: Phase 2 = 4, Phase 3 = 15, Phase 4 = 9 (owner-terminated), Phase 5 = 0 (owner ruling), cold-reader = 1; 2 owner escalations (round-cap raise; Phase 4 stop)
+- Category: strategy
+
 ## 2026-08-25T21:56:31Z — voice-intake-demo — OVERSEER_ESCALATE
 - Trigger: #1 false-DONE (slice-aware clause: evidence must match the artifact's Exit criterion). #8 noted, not fired — see Action.
 - Evidence: `.claude/overseer/slice/voice-intake-demo.md` § "Exit criterion" item 1 and "What proves DONE" name four tests as the proof of the unit-suite half: `test_mulaw_codec_reference_table`, `test_resampler_statefulness_across_chunks`, `test_timing_recorder_event_stream_integrity`, `test_audio_frame_error_resilience`. Enumerated against `tests/` (36 test functions): only `test_resampler_statefulness_across_chunks` exists (`tests/test_resampler.py`). `test_mulaw_codec_reference_table` exists only as five prefixed variants (`..._decode`, `..._decode_length`, `..._encode`, `..._encode_length`, `..._encode_never_emits_negative_zero`, `tests/test_codec.py`); `test_timing_recorder_event_stream_integrity` only as four (`..._line_per_call`, `..._timestamps`, `..._detail`, `..._flushes_each_call`, `tests/test_timing.py`); `test_audio_frame_error_resilience` does not exist in any form — Seam 4 was implemented as 16 tests in `tests/test_session.py` spanning `decode_base64_frame`, `start()`, both handlers and `close()`, a scope materially broader than the name "audio frame error resilience" describes.

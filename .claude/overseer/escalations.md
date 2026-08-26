@@ -173,3 +173,31 @@ ADR_RATIFICATION escalation and the human's resolution. Used in the
 - Human chose: A (accept as open risk, proceed).
 - Latency to decision: immediate.
 - Notes: Folded into the artifact as Premise 5 (OPEN/ACCEPTED RISK), same treatment as Premise 3. This was the second cold-reader pass's only finding; the first cold-read's cross-section contradiction (Seam↔Exit-criterion event-timing mismatch) was independently re-verified fixed and did not recur.
+
+## 2026-08-26T00:00:00Z — DESIGN_FORK — feature:vertical-profile-bridge
+- Question: Phase 2 (decompose) of the feature-architect loop hit its round-4 circuit breaker. Five critic rounds each found a distinct, real defect, each smaller than the last: (0) S3 called S4's entry point before S4 exists → `on_call_end` injected; (1) `disclosure.md` was loaded by S1 but never delivered to the caller → Twilio `<Say>` plays it verbatim before `<Connect><Stream>` (MVP doc's non-generative disclosure); (2) no slice owned the composition root / `main.py` → assigned to S3 (`create_app` + `__main__` + script entry); (3) S4's dependency line omitted S3, whose `TranscriptTurn` it consumes → added; (4) S3's sync `send_media` lacked the sync→async adapter S2 already had → added. No decision was ever reverted.
+- Options offered: A) Accept the round-4 draft as converged and proceed to Phase 3 (contracts), where the critic re-examines the same surface in more detail. B) Allow a 5th critic round on Phase 2. C) Owner reads the draft first.
+- Recommendation: A because the round cap exists to catch oscillation, and this was monotone convergence on five different points; the last fix is a two-line symmetric omission.
+- Human chose: C then A — owner asked for the full S1–S7 breakdown, read it, replied "добре".
+- Latency to decision: immediate.
+- Notes: Draft at scratchpad `phase2-decompose.md` (round 4). Premise `PR-gemini-live-greeting-on-connect` reworded in the same round: the model no longer speaks the disclosure, only opens the conversation after `<Say>`.
+
+## 2026-08-26T00:00:00Z — DESIGN_FORK — profile-loader (driven by feature:vertical-profile-bridge)
+- Question: Phase 3 (Hardest seams) hit the round-4 circuit breaker. Five critic rounds, five distinct real findings, no reversals: (0) the escaped-braces test string did not discriminate regex from parser — replaced with a single-token case, verified by execution; (1) Q9's no-aliasing invariant had no seam — Seam 4 added; (2) invalid-UTF-8 in `profile.toml` itself was never exercised — mutation added; (3) Q10's whitespace differential had no test — Seam 5 added; (4) `Profile` is unhashable and nothing documents it — assertion added to Seam 4. Phase 2 had also taken 4 rounds (root default relied on CWD; strict schema would have rejected `[sms]`; two sources for `Profile.name`).
+- Options offered: A) Accept the round-4 draft (all five fixes applied) as converged and continue to Phases 4–5 + cold-reader. B) One more Phase 3 critic round. C) Owner reads the seams section first.
+- Recommendation: A — monotone convergence on distinct points, last fix is one assertion; the cold-reader audit still runs on the whole artifact.
+- Human chose: raise the round cap for THIS SESSION only — "якщо знаходяться реальні діри то тре їх фіксити". Loop continues until CRITIC_PASS; cap is not a stop reason this session. Applies to every remaining phase and slice planned in this session.
+- Latency to decision: immediate.
+- Notes: the other three batched items (SMS marker order, A4 number, toolchain) were not yet answered — re-asked after planning completes. Batched with three other owner items — SMS marker order (at-most-once, recommended keep), A4 on the same Twilio number (recommended same), and the missing local toolchain (no `uv`/python3.13/pytest/ruff/mypy on PATH this session; slice-builder cannot run the exit criterion until restored).
+
+## 2026-08-26T00:00:00Z — DESIGN_FORK — profile-loader (Phase 4 loop termination)
+- Question: Phase 4 (Exit criterion) reached round 9 under the raised cap; each round found a distinct real gap (test-name pinning vs Q21 property; no ids for Seams 1/3/4/5; G-cases bypassing load_profile; V1 missing outcomes identity; grouped tests vs single-id docstrings; prefix-as-proof for E rows; wrong hand-typed totals ×2; E7/E5 routing leftover).
+- Owner ruled: "так давай це останній раунд з критиком і будемо рухатися далі" — round 9 is the final Phase 4 critic round. Its fix (if any) is applied without a further round. Phase 5 (Deferred) proceeds without its own critic loop; the cold-reader audit runs once, its findings are applied once, no re-audit; the artifact is then written.
+- Latency to decision: immediate.
+- Notes: the owner's earlier session-wide cap raise still stands for later slices; this ruling is specific to profile-loader Phase 4/5.
+
+## 2026-08-26T00:00:00Z — PRODUCT_DECISION ×2 + TOOLING — feature:vertical-profile-bridge (batched)
+- SMS idempotency marker: Options A) write marker BEFORE the Twilio send (at-most-once; a send failure leaves zero SMS, recorded in brief/email for manual resend) B) write AFTER (at-least-once; duplicate possible). Recommendation: A. **Human chose: A.**
+- A4 profile-swap call: Options A) same Cloud Run service + same Twilio number, env-only redeploy to `eco-consultant` then back B) provision a second number. Recommendation: A. **Human chose: A.**
+- Toolchain: no `uv`/python3.13/pytest/ruff/mypy on PATH this session. Options A) owner restores `uv` and runs `uv sync` themselves B) plan S2/S3 only, build later C) build on system 3.12. Recommendation: A. **Human chose: A** — owner restores the toolchain; building S1 waits for it.
+- Latency to decision: immediate (all three).
