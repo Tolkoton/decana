@@ -228,3 +228,95 @@ unreviewed drift. The record says otherwise.
   so the record outlives the session. `git commit` is a human checkpoint under
   this project's autonomy policy and is hook-blocked for agents, so the files
   are staged and the command handed over rather than run.
+
+---
+
+## 2026-08-26 — Stop discipline, third narrowing: a ratified planning artifact discharges the pre-Step-4 checkpoints, and your own unreviewed draft is not ratified text
+
+**Scope note.** Same scope as the two entries above: this file's header names the
+overseer's own SKILL.md, but the ratified practice since 2026-08-25 is that
+proposals to any agent definition are filed here before the edit, per Article 7
+(*propose → human-ratify → replay*). This one amends
+`.claude/skills/slice-builder/SKILL.md`.
+
+**Trigger.** Owner, in-session 2026-08-26, on the `profile-loader` build:
+*"ти все ще зупиняєшся кожні 2 хвилини. чому?"* — "still", meaning the pattern
+predates the session. Eight stops in one slice; one met the escalate list.
+
+**Evidence — the seven unjustified stops, each traced to the text that caused it.**
+
+1. **Step 2 skeleton.** The implementer's own opening message stated that Steps
+   0, 1 and 3 were pre-satisfied by `.claude/overseer/slice/profile-loader.md`
+   (PLANNING_COMPLETE, cold-reader CRITIC_PASS), then stopped at Step 2 and
+   asked "Go?" anyway. The skeleton was a transcription of the Seam's ratified
+   field list and the feature contract's code block — no judgement in it. Cause:
+   § "What still stops", final paragraph — *"Step 2's skeleton … are untouched"*
+   — written when a slice began from a conversation, not from a ratified
+   artifact produced by `/plan-slice`.
+2. **Escalating with a menu.** The DRAFT-marker defect (a correct stop) was put
+   as a three-option `AskUserQuestion` with previews, while the implementer
+   already held a recommendation. Owner rejected the call, asked to clarify,
+   then asked *"твоя пропозиція?"* — three turns to extract a held view. Cause:
+   § "Decide alone" prescribes the one-line report format for decisions, and
+   nothing prescribes a format for escalations.
+3. **Asking to strengthen its own test.** A surviving mutation (a greedy
+   `<!--.*-->` under `re.DOTALL`) showed W7's fixture did not pin what W8's own
+   ratified rationale already claimed it ruled out — "a pattern that strips too
+   much". The fix was additive: one clause to a fixture the implementer had
+   authored ~10 minutes earlier, in the same session, never reviewed by anyone.
+   It stopped to ask. Cause: § "Decide alone", bullet 3 — *"Changing what a test
+   asserts is not mechanics"* — read as covering the implementer's own
+   uncommitted draft. That reading makes the rule protect the agent's ten-minute-
+   old work with the same force as the owner's ratified decisions, which inverts
+   its purpose.
+4. **Step 5 smoke.** Both invocations had already been run and their full output
+   printed in the transcript, including the rejection path's exit code. The stop
+   asked the owner to re-run them and reply DONE. Cause: § "What still stops"
+   lists Step 5 as untouched, written for smokes with a human-only oracle ("open
+   the admin panel, look for the file") — not for a pure-stdlib slice whose smoke
+   the agent can fully execute and show.
+
+Remaining three were consequences of 2 (the clarify round and the re-ask).
+
+**Rationale.** The calibration and narrowing entries of 2026-08-25 are correct
+and are not being widened. What this adds is that three sentences elsewhere in
+the same file quietly re-authorise the behaviour those entries removed: the
+"untouched" list restores checkpoints an upstream ratified artifact has already
+discharged, and the "assertion set" bullet lets the agent treat its own draft as
+ratified text. Article 5's test — *would being wrong cost more than one commit to
+undo?* — answers "no" for all four.
+
+**The four edits.**
+
+- **A.** § "What still stops", final paragraph: when the slice arrives with a
+  PLANNING_COMPLETE artifact, Steps 0/1/2/3 are discharged by that artifact and
+  are not re-asked. They remain live for a slice begun from conversation.
+- **B.** § "Decide alone", bullet 3: "ratified" means text the OWNER has seen and
+  approved. A test authored this session and not yet reviewed is the agent's
+  draft; strengthening it so it actually tests a property its ratified
+  description already claims is decide-alone. Adding or removing a behavior id,
+  or changing what an id asserts, stays escalate.
+- **C.** § "Escalate, without exception": add the delivery format — one
+  recommendation and its killed alternatives, one closed question. `AskUserQuestion`
+  with a menu only when genuinely indifferent.
+- **D.** § "What still stops": split Step 5 by oracle. Smoke the agent can fully
+  execute → run it, show it, continue. Smoke needing a human oracle → stop.
+
+**Risk.** (1) A ratified artifact that is wrong now flows to code with one fewer
+human look. Detector: the DRAFT-marker defect in this very session was caught by
+the implementer reading the artifact against the S3 contract, not by the Step 2
+stop — which it sailed through. Edit A does not touch the escalate list, so the
+same finding still stops. (2) Edit B eroding into "my own tests are mine to
+change". Bounded by its second sentence: the behavior-id set and what each id
+asserts stay escalate, and both are written in the slice artifact where overseer
+check #11 sees them. (3) Edit D letting a self-run smoke substitute for a real
+external check. Bounded to smokes with no human-only oracle, which is the same
+distinction Step 5 already draws in its own text.
+
+**Status: RATIFIED** by the owner in-session 2026-08-26 ("так і внеси правки"),
+after the four edits were stated to them in the preceding turn. Replay: S2's
+build runs under the amended discipline.
+
+**Recorded:** filed before the skill edit, per Article 7's ordering. Staged, not
+committed — `git commit` is a human checkpoint under this project's autonomy
+policy.

@@ -213,6 +213,7 @@ This is Constitution Article 5 at slice altitude, not a new rule: *"If reversing
 - A choice local to one module that a single commit could reverse.
 - A choice derivable from a precedent already recorded in this repo.
 - Test-plan mechanics — fixture shape, spy vs real dependency, keeping or dropping a pass-on-arrival test — **provided the assertion set is unchanged**. Changing what a test asserts is not mechanics.
+  - **"Ratified" means the OWNER has seen and approved it.** A test you authored this session and nobody has reviewed is your own draft, not ratified text. Strengthening it so that it actually tests a property its ratified *description* already claims — the usual case being a mutation that survived — is decide-alone, and doing it is not optional: a surviving mutation in a seam you are building is a hole you found and left. What stays escalate is the behavior-id set itself: adding an id, removing one, or changing what an id asserts. Both live in the slice artifact, where overseer check #11 can see them. (Added 2026-08-26 after the implementer stopped to ask permission to add one clause to a fixture it had written ten minutes earlier — see `audit.md`, edit B.)
 - Anything where you would write "I lean toward X" and X follows from a rule already written down. If you can cite the rule, you are not asking a question; you are narrating.
 
 Report it as: **"Decided X because Y; overrule if you disagree."** One line. The owner keeps the veto without spending a turn.
@@ -231,6 +232,8 @@ No balancing test applies to these. They are not weighed against the cost of a t
 - The slice's **hard-to-undo set**, named during planning.
 - Any change to **the hooks, the overseer, or anything else that audits your own work** — Article 7. Self-modification is human-ratified and recorded in `audit.md`, in that order.
 - A **verification with no available oracle**. Say so plainly when that is the situation: the mu-law reference table was the right stop, because transcription error was the live risk and a second independent derivation was the only possible check.
+
+**How to escalate, when you do.** Lead with **one recommendation** and its one-line why; follow with the alternatives you killed and what killed each; end with a single closed question. That is how this project already records decisions — every `Q<n>` in a slice artifact carries "Rejected: X — steelman: … ; rejected because …" — and the owner is deciding whether to accept your reasoning, not doing the analysis themselves. A balanced menu reads as withholding a view you have already formed, and costs turns: on 2026-08-26 a three-option `AskUserQuestion` was rejected, then clarified, then answered with "твоя пропозиція?" — three turns to extract a held recommendation. Use `AskUserQuestion` with options only when you are genuinely indifferent; if that is often, you are under-thinking the problem.
 
 ### Why these two lists and not others
 
@@ -276,6 +279,8 @@ The word **STOP** in this workflow is literal. After each step that says STOP:
 
 Resist the urge to chain steps. Each STOP is a checkpoint where the user can redirect cheaply. Without STOPs, the slice quietly drifts away from the seam.
 
+**Read the four subsections below before applying that literally — three of them narrow it, and a stop they have removed is not a checkpoint, it is a wasted turn.** Over-escalating is a failure to apply Constitution Article 5, not an excess of caution.
+
 ### The gate is the behavior list, not the cadence
 
 **Once the owner has approved a behavior list for a seam (Step 3), run each behavior RED→GREEN→REFACTOR in one turn, then continue to the next behavior in that list without stopping.** Step 4's per-transition STOPs do not apply inside an approved list.
@@ -292,4 +297,17 @@ Why the gate sits there: the owner's input has repeatedly changed the outcome at
 - **Genuine failure, not milestones.** A test that fails for a reason its behavior did not predict; a falsified premise (Article 8); an assertion you cannot make hold as specified. Stop for surprises.
 - **Not success.** Do not spend a turn reporting that a cycle went green. "It works, here's the count" is a line in the next report, not a turn.
 
-The STOPs outside Step 4 — Step 0's scope validation, Step 1's docs report, Step 2's skeleton, Step 3's behavior-list approval, Step 5's smoke verification — are untouched. Those are where the owner's judgment is load-bearing.
+The STOPs outside Step 4 — Step 0's scope validation, Step 1's docs report, Step 2's skeleton, Step 3's behavior-list approval, Step 5's smoke verification — are untouched **for a slice begun from a conversation**. Those are where the owner's judgment is load-bearing, because nothing upstream has captured it yet.
+
+### When the slice arrives with a ratified planning artifact
+
+**A slice handed to you as a PLANNING_COMPLETE artifact from `/plan-slice` has already spent the owner's judgement on Steps 0–3. Do not spend it twice.** That artifact *is* the scope decision, the seam contract and the behavior list, and it reached you through a planner-critic loop and a cold-reader pass. Re-asking "Go?" over a skeleton that transcribes its ratified field list buys nothing — the owner would be approving their own decision back to themselves.
+
+So: read the artifact, say in one line which checkpoints it discharges, and go straight to Step 4. Step 1 is moot for a slice touching no external system; say that too, and say what you verified instead.
+
+What this does **not** relax: the escalate list, in full. The check that matters is not the skeleton stop — on 2026-08-26 a defect in the ratified artifact (a DRAFT marker that would have been read aloud to callers) sailed straight through the Step 2 stop and was caught later, by reading the artifact against the consuming slice's contract. Reading beats ceremony. If the artifact is wrong, that is an escalation whenever you find it.
+
+### Step 5 — split by oracle
+
+- **A smoke you can fully execute yourself** — pure functions, local files, anything with no human-only oracle: run it, put the whole output in the transcript, and continue to Step 6. The owner reads the result; they are not a precondition for it. Asking them to re-run a command you already ran and printed is ceremony.
+- **A smoke needing a human oracle** — "open the admin panel and confirm the file arrived", anything whose real effect lands in a system you cannot read back: STOP, exactly as Step 5 says. That is the case the checkpoint was written for.
