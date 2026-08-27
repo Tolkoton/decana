@@ -484,3 +484,154 @@ last night — decide and log, don't stop to ask."* One item was escalated anywa
   `OVERSEER_SLICE_AWAITING_OWNER` and stops. The rule's purpose is to stop an endless
   loop; the loop is stopped, and the class of defect was audited rather than resampled.
   Surfaced in the handoff so the owner can call for a third pass.
+
+
+---
+
+# Decide-and-log — 2026-08-27 continuous run, slice `twilio-server`
+
+Owner directed indefinite unattended operation: decide everything, log here, park
+after three attempts, never stop to ask. Ordered by cost to reverse, highest first.
+
+## 1. `_sweep_expired` claims before it closes (real defect, found by S8.c)
+- **Cost to reverse: medium** — changes the sweep's ordering contract.
+- S8.c drove the forced interleaving and found the stale session was closed
+  **twice**: the guarded pop kept the dict consistent but did nothing about a
+  duplicate `close()`, because both sweeps snapshot the entry and both close it.
+- Fix: `registry.pop(call_sid, None)` is the CLAIM — whoever pops owns the entry
+  and is the only one that closes it. `continue` if the pop returns None.
+- Confidence: high. Mutation-verified both ways: close-then-pop and bare `del` are
+  each killed by S8.c alone. `GeminiLiveSession.close()` is idempotent (S2 Q4) so
+  the duplicate was benign in production — but S8.c's ratified assertion is "no
+  session is closed twice", and the fix is strictly better than relying on the
+  callee's idempotence.
+
+## 2. S8.c is driven through two real `POST /voice` requests, not by calling the sweep
+- **Cost to reverse: low** — test-plan mechanics; the assertion set is unchanged.
+- The registry is a closure inside `create_app` and unreachable from a test, and the
+  defect's blast radius is precisely that the error lands inside an *unrelated*
+  request — which only a request-level test exercises.
+- Interleaving is forced with an `asyncio.Event` gate rather than hoped for via
+  `gather`: without the gate the test passes whether or not the race ran.
+
+## 3. A reusable mutation harness, `scripts/mutate_check.py`
+- **Cost to reverse: low** — a script; deleting it restores the status quo.
+- Implements the ratified restore-or-do-not-run rule: asserts the mutation applied
+  (and is unambiguous), restores in a `finally` **and** on SIGTERM/SIGINT, verifies
+  the restore by SHA-256, and bounds the pytest run. Old/new text is read from files
+  so shell quoting cannot corrupt it — the failure mode that produced a meaningless
+  pass on `voice-intake-demo` Seam 5.
+- A timeout is reported as a **defect in the test**, not as a survival: a hang means
+  an unbounded wait, which is what killed the ad-hoc runner earlier today.
+
+
+## 4. Seam 13's named wrong-implementation is void; the assertions are not
+- **Cost to reverse: low** — a correction to the seam's prose, not to what it asserts.
+- Seam 13 names "a `match` with no `Interrupted` arm, which raises mid-call" as the
+  defect. The shipped router is an `isinstance` elif-chain: an unmatched member falls
+  through and does nothing, which IS the ratified behaviour. Mutation-verified —
+  disabling the arm survives the entire suite.
+- The seam is not worthless: the real defect in this shape is the **over-reaction**,
+  treating a barge-in as a call ending. That mutation is killed by S13.a and S13.b.
+- Recorded rather than quietly rewritten because a seam whose stated falsifier cannot
+  occur will read as covered to the next auditor while proving something else.
+
+
+## 5. Seam 15 needs THREE calls, not two, and the middle one first
+- **Cost to reverse: low** — test setup; the assertion set is unchanged.
+- The seam specified two calls in "reverse order (second-registered adopts first)".
+  Mutation-verified as insufficient: `registry.popitem()` is LIFO, so that exact order
+  matches it by luck and the mutation SURVIVED. Registration order kills LIFO but lets
+  a FIFO `next(iter(registry))` survive for the mirror reason.
+- Three calls with the middle adopted first is the smallest setup where the chosen
+  order is neither first nor last, so both wrong lookups die. Both now verified killed.
+- Worth recording because the seam was written to catch the worst defect in the slice
+  (two callers' transcripts swapped, a data-protection incident that is silent by
+  construction) and its stated setup could not have caught the most obvious form of it.
+
+
+## 6. PARKED: the twilio-server real-environment smoke
+- **Cost to reverse: none** — parked, not decided.
+- `scripts/smoke_twilio_server.py` is written, lints, typechecks and self-parks
+  cleanly. It cannot run here: `GEMINI_API_KEY` is not in the process environment,
+  and `.env` is hard-denied to the agent by `protect-paths.sh`.
+- **Unblocker, specifically:** export `GEMINI_API_KEY` into the process environment
+  before the session starts. That is the supervisor's job under change 8 (secrets
+  come from the environment, never from `.env`), so this park closes itself once the
+  supervisor runs the loop.
+- Routed around rather than escalated: S3's exit-criterion item 1 is complete
+  (46/46 ratified ids, clean in both directions) and item 3's checks pass, so the
+  slice is finished except for this one item, and S4 is unblocked. Chat is reserved
+  for when nothing can move.
+- The script costs one real-API call and decrements the disk-persisted budget
+  BEFORE opening any socket, so a crash-loop cannot spend more than the cap.
+
+
+## 7. The handoff file failed its own acceptance test, and nothing was checking
+- **Cost to reverse: low** — a file repair.
+- The rule for `PROGRESS.md` says "if a cold reader cannot resume from this file
+  alone, it is wrong." Nobody had ever run that test. Reading it as a cold reader
+  found three defects at once:
+  - a **duplicate `PARKED: none`** sitting directly below the parked smoke, so the
+    file contradicted itself about whether anything was blocked;
+  - an **orphaned fragment** left by an earlier find-and-replace, dangling after a
+    code fence and reading as part of the exit-criterion snippet;
+  - two stale facts (mypy file count; a deliverable listed as absent that had since
+    been added).
+- Every one came from editing the file with string replacement and never re-reading
+  the result. The lesson generalises past this file: **a find-and-replace that does
+  not match fails silently**, and a `## NOW` block edited that way drifts from what it
+  claims exactly when it matters — after a session death, read by an instance with no
+  memory to correct it against.
+- **Action taken:** repaired, and the acceptance test is now something to actually run
+  (`sed -n '/^## NOW/,/^---$/p' PROGRESS.md` and read it) rather than a claim the file
+  makes about itself.
+
+
+## 8. The cost cap failed OPEN on a corrupt file; now it fails closed
+- **Cost to reverse: low** — one branch in `scripts/_budget.py`.
+- Found by exercising the module rather than reading it: a corrupt budget file was
+  caught alongside a missing one and reset the count to zero, which **removes the cap
+  entirely**. For a spending guard that is backwards — the cap exists precisely
+  because nobody is watching, so "count unknown" must mean "no".
+- Now distinguished: a **missing** file is the first run and spends freely; a
+  **corrupt** one (bad JSON, or valid JSON that is not an object) refuses and prints
+  why, because a silent refusal reads as a normal cap and nobody repairs the file.
+- Verified across all four shapes: missing → True, corrupt → False, wrong type →
+  False, stale date → True.
+- The asymmetry is deliberate and worth keeping: one parked smoke is cheap, an
+  uncapped crash-loop against a paid API with nobody watching is not.
+
+
+## 9. `AGENTS.md` was still the unfilled template
+- **Cost to reverse: low** — a documentation file.
+- It is loaded into every session as project instructions, and it still read
+  "# Agents guide — <project name>" and "<What this project does.>". A fresh instance
+  resuming after a session death was being handed placeholders as its project context.
+- Filled in with what a resuming instance actually needs: read `PROGRESS.md`'s `## NOW`
+  first; the unattended work loop and where the DAG lives; the latency constraint that
+  explains why the session opens in the webhook rather than the socket; the key paths;
+  and the four load-bearing conventions that have each already cost something (the
+  exact mypy command, the both-directions id diff, the mutation harness, commits).
+- Found while looking for continuous-operation blockers rather than by being told —
+  the fix is small, but a fresh instance's first read is the one context that cannot
+  be corrected later by anything except itself.
+
+
+## 10. NOT changed: the 12 dead `Write(...)` deny rules stay
+- **Cost to reverse: n/a — deliberately took no action.**
+- Observed while running the supervisor: the harness prints
+  `Permission deny rule (.claude/settings.json): Write(./.env) is not matched by file
+  permission checks — only Edit(path) rules are.` at session start. Verified: all 12
+  `Write(...)` deny entries have an equivalent `Edit(...)` entry, and the harness
+  states `Edit` rules cover every file-editing tool. So the `.env` protection is
+  intact via the `Edit` rules, and the `Write` entries are inert config producing one
+  warning line per session start.
+- **Deciding not to remove them, against my first instinct.** In an unattended loop
+  with many restarts, warning noise is how real warnings get ignored, so removing dead
+  config looked right. But the asymmetry is wrong: the benefit is one line of output;
+  the cost of my reading being wrong is an unprotected `.env`, and a leaked secret is
+  hard to undo even though the config edit is not. "Decide everything" does not mean
+  every decision resolves to an action.
+- **For the owner:** if you want the noise gone, deleting the 12 `Write(...)` entries
+  from `permissions.deny` is the change; the evidence that it is safe is above.

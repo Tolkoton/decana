@@ -1,8 +1,126 @@
 # Build progress
 
-One entry per completed slice, newest first. Planning artifacts live in
-`.claude/overseer/slice/`; this file is the short version — what shipped, what
-surprised us, and what the next slice inherits.
+One `## NOW` block at the top, live. Then one entry per completed slice, newest
+first. Planning artifacts live in `.claude/overseer/slice/`.
+
+**`## NOW` is written for a fresh instance with no memory of the session that
+wrote it.** If you cannot resume from it alone, it is wrong — fix it rather than
+guessing. It is updated at every unit, not at session end, so a session killed by
+a context limit or a crash still leaves it accurate. Its timestamp is the liveness
+signal: chat is reserved for interrupts, so nothing else reports that the machine
+is still moving.
+
+---
+
+## NOW — S3 and S4 tests DONE; S5 `dispatch` is next (updated 2026-08-27T21:45:00Z)
+
+- **Suite: 260 passed.** `ruff check src tests scripts` clean.
+  `mypy --strict src scripts tests` clean (37 files).
+  **Use that exact mypy command** — `pyproject.toml` scopes mypy to `src`/`scripts`,
+  so a bare `uv run mypy` silently skips the test suite and reports clean.
+
+- **S3 `twilio-server`** — all 46 ratified ids green. Contract:
+  `.claude/overseer/slice/twilio-server.md`.
+- **S4 `analysis`** — all 22 ratified ids green, 7 mutations killed. Contract:
+  `.claude/overseer/slice/analysis.md` (RATIFIED; 8 defects removed across 2 critic
+  rounds and 6 cold-read passes).
+
+- **Next unblocked item: plan and build S5 `dispatch`.** Run `/plan-slice dispatch`.
+  It consumes `Analysis` from S4 and `CallRecord` from S3 — both exist and are tested.
+  Its ratified contract is the "Edge S5 ← S3, S4" block in
+  `.claude/architecture/feature/vertical-profile-bridge.md`. **S5 needs no credentials
+  to build** — the SMTP and Twilio senders are injected, so the whole slice is
+  fake-driven; the secrets are runtime-only.
+
+- **PARKED, both on the same unblocker:**
+  - `scripts/smoke_twilio_server.py` (S3 exit criterion item 2)
+  - `scripts/smoke_analysis.py` (S4 exit criterion item 2)
+
+  **Both need `GEMINI_API_KEY` exported into the process environment.** `.env` is
+  hard-denied to the agent, so `scripts/supervise.sh` must export it. Each spends one
+  unit of `.claude/overseer/.api-budget.json` before opening any socket, and each
+  parks cleanly rather than failing when the key or the budget is absent.
+
+### How to check either slice's exit criterion
+
+Run `scripts/check_ids.py`. It diffs the ratified id set against the test docstrings
+in both directions for every slice, and exits non-zero if either direction is dirty.
+Do not eyeball this.
+
+### Work queue
+
+| node | state | note |
+|---|---|---|
+| S1 profile | DONE | |
+| S2 gemini-live | DONE | |
+| S3 twilio-server | **tests DONE** | 46/46 ids; smoke PARKED |
+| S4 analysis | **tests DONE** | 22/22 ids; smoke PARKED |
+| **S5 dispatch** | **NEXT** | fake-driven; needs no credentials to build |
+| S6 deploy | **HUMAN-REQUIRED** | Cloud Run + cloud credentials. Park on sight. |
+| S7 real calls | **HUMAN-REQUIRED** | provisioned number + a human with a phone |
+
+**After S5, every remaining node is HUMAN-REQUIRED.** That is the point at which the
+loop has genuinely run out of work and should say so in chat.
+
+### Live risks — decided, do not re-litigate
+
+- **`_sweep_expired` claims before it closes** (S3). `registry.pop(...)` is the claim;
+  whoever pops owns the entry and closes it. S8.c found a real double-close here.
+- **Every teardown path passes the websocket** (S3), or a call ends with the socket
+  open forever. That is a hang, not an error; it cost three attempts to find.
+- **`analyse` catches `Exception`, never `BaseException`** (S4-Q7). One word wider
+  passes every node except `A4.f` and silently costs teardown its cancellation.
+- **`GeminiAnalysisClient` must use `client.aio.models.generate_content`** and must
+  forward `api_key`. The sync facade blocks the loop; a dropped key is masked by the
+  SDK's own env fallback and passes CI, smoke and production alike.
+- **A non-string `outcome` is a wrong SHAPE, not a wrong value** (S4). Found during the
+  build; the diagnosis differs a week later, when the record is all there is.
+- **Use `scripts/mutate_check.py` for every mutation check.** It asserts the mutation
+  applied, restores in a `finally` and on signals, and verifies the restore. Ad-hoc
+  runners are forbidden: one died mid-mutation and left the tree corrupted.
+- **Maintain this block with `Edit`, never a script doing `str.replace`** — a
+  no-match fails silently, and this file has drifted that way twice.
+---
+
+## Slice S4 — analysis (DONE 2026-08-27)
+
+Feature `vertical-profile-bridge`, slice S4. Contract:
+`.claude/overseer/slice/analysis.md`. Planned and built unattended.
+
+- **Modules:** `src/decana/analysis/{model,analyse,gemini_client}.py`.
+- **Tests:** `tests/test_analysis.py`, 25 nodes covering all 22 ratified ids, clean in
+  both directions (`scripts/check_ids.py`). Suite 235 -> 260.
+- **Mutation evidence: 7 of 7 killed**, each via `scripts/mutate_check.py`.
+- **Smoke:** `scripts/smoke_analysis.py` — PARKED on `GEMINI_API_KEY`.
+
+### Surprises
+
+- **Eight defects in planning, every one the same shape** — a ratified thing with fewer
+  than all three of (a decision naming the mechanism, a seam naming the wrong
+  implementation, an id naming the node). None was found by re-reading; every one came
+  from an enumeration walked row by row.
+- **`except BaseException` is one word from correct and silent forever.** It passes
+  every node except `A4.f`, `ruff` and `mypy`, and costs teardown the ability to cancel
+  the analysis at all.
+- **A dropped `api_key` is masked by the SDK itself.** `google-genai` falls back to
+  `os.environ['GEMINI_API_KEY']`, which is exactly what the deploy injects — so
+  `genai.Client()` passes CI, the smoke AND production. The usual reassurance that a
+  real call would catch it is false here.
+- **The sync and async facades are interchangeable to mypy and not to the event loop.**
+  `client.models.generate_content` is a blocking `def`; wrapping it in an `async def`
+  defeats `wait_for` and stalls audio for every other live call.
+- **A repair can introduce the defect it is repairing.** The `summary`-content fix was
+  applied to four of Seam 4's five failure modes and skipped the fifth.
+
+### Open for the next slice
+
+- **S5 consumes `Analysis` and `CallRecord`**, both tested. It needs no credentials to
+  build; SMTP and Twilio senders are injected.
+- **`raw` is what S5 writes** to `{call_sid}.analysis.json`, and it is populated on the
+  failure paths too — deliberately, because a parse failure is when someone needs to
+  see what the model actually said.
+- **W-1:** truncation can end a summary mid-sentence. Accepted — the brief points at
+  the transcript rather than replacing it.
 
 ## Slice S2 — gemini-live (DONE 2026-08-27)
 
