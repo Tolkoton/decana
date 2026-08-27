@@ -10,13 +10,29 @@
 
 This project is configured for autonomous Claude Code operation. Follow these rules:
 
-### Commits are a human checkpoint
+### Commits are yours; the branch and the remote are the human's
 
-**Do NOT run `git commit`.** After completing a logical unit of work:
-1. Stage relevant files with `git add <files>` (not `git add -A` unless the diff truly is one unit)
-2. Run validation: `ruff check`, `mypy`, relevant `pytest` paths
-3. Print a one-line summary of what changed and a suggested conventional-commit message
-4. STOP and wait for the human to review the diff and run `git commit` themselves
+**Amended 2026-08-27 (owner-ratified; see `.claude/overseer/audit.md`).** Commits were
+previously a human checkpoint. Under continuous unattended operation that produced the
+opposite of a review point — one undifferentiated multi-thousand-line diff spanning
+unrelated concerns, which nobody could read as a unit.
+
+**You may run `git commit` on a feature branch.** After each logical unit of work:
+1. Stage the relevant files with `git add <files>` — not `git add -A` unless the diff
+   genuinely is one unit. **The grouping is the review**, and it is the whole reason
+   this was loosened; a commit that mixes concerns gives back nothing.
+2. Run validation: `ruff check`, `uv run mypy --strict src scripts tests`, `pytest`.
+3. Commit with a conventional-commit message whose body says *why*, not just what.
+
+**Still the human's, and not by accident:**
+- **`main` and the other protected branches refuse commits.** Work on a feature branch;
+  the merge is the owner's.
+- **Publishing to a remote stays on the ask-list.** Nothing leaves the machine
+  unprompted.
+- **Forced history rewrites and destructive resets stay hard-denied.**
+
+The diff the owner reads before publishing is now the last human gate. Make it
+readable: that is the obligation that replaced the old one.
 
 This is enforced by a hook (`block-dangerous.sh`) as defense-in-depth. If you find yourself wanting to commit, you've understood the workflow incorrectly — stage and report instead.
 
@@ -125,9 +141,28 @@ End a RED turn with `=== TDD RED ===` alone on its own line to skip the test ste
   `OVERSEER_ADR_REQUIRED: <ADR>` / `OVERSEER_ESCALATE: <JSON>`. Emitting any
   `OVERSEER_` marker is also recursion guard 3 — it tells the hook the audit
   already ran, so it will not re-fire on your verdict turn.
-- If `OVERSEER_ESCALATE`, surface to user via `AskUserQuestion`. Use options + your_recommendation verbatim. Do not answer the escalation yourself; wait for human's selection.
 - If `OVERSEER_BLOCK`, address the specific check before continuing.
 - If `OVERSEER_ADR_REQUIRED`, draft the ADR in `docs/adr/` before proceeding with code.
+
+**Verdict routing under unattended operation (ratified 2026-08-27).** The rules above
+assume the owner is nearby. When the loop is running unattended they change, because a
+stop idles the machine until someone returns:
+
+| verdict | attended | unattended |
+|---|---|---|
+| `OVERSEER_BLOCK` | address, then continue | address, then continue — unchanged |
+| `OVERSEER_ADR_REQUIRED` | draft the ADR first | draft the ADR, log it, continue |
+| `OVERSEER_ESCALATE` | `AskUserQuestion`, wait | **PARK** the item with the check number as its unblocker, log to `unattended-decisions.md` ordered by cost to reverse, and move to the next unblocked item |
+
+**Except:** an escalation that touches the hard-to-undo set, or a falsified premise
+that invalidates already-committed work, is a genuine chat interrupt in either mode.
+An `OVERSEER_ADR_REQUIRED` blocking every unit would otherwise stall a whole slice in
+silence — which is why it continues rather than waits.
+
+**Secrets come from the process environment, never from `.env`.** Reading `.env` is
+hard-denied to the agent, so the supervisor (`scripts/supervise.sh`) is responsible for
+exporting what a session needs. A missing credential **parks** the item that needs it
+and names the variable as the unblocker; it does not fail the run.
 - Always append the entry the skill prescribes to `.claude/overseer/ledger.md`.
 - **Recursion safety & override.** The hook has three guards — the
   `stop_hook_active` envelope flag, a SHA-256 idempotency file

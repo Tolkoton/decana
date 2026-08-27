@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PreToolUse hook for Bash. Blocks destructive commands and git commit.
+# PreToolUse hook for Bash. Blocks destructive commands, and blocks commits and
+# publishes on protected branches. Plain commits on a feature branch are allowed.
 # Exit 2 = block + show reason to Claude via stderr.
 # Exit 0 = allow.
 set -euo pipefail
@@ -79,12 +80,17 @@ for protected in "${PROTECTED_BRANCHES[@]}"; do
   fi
 done
 
-# Block `git commit` entirely — commits are a human review checkpoint by policy.
-if echo "$CMD" | grep -qE '^[[:space:]]*git[[:space:]]+commit($|\s)'; then
-  echo "BLOCKED: this project treats commits as a human review checkpoint." >&2
-  echo "Stage with 'git add <files>' if helpful, then let the user review the diff and run 'git commit' themselves." >&2
-  echo "If the user explicitly asked you to commit, explain this hook is blocking and ask them to run the commit manually." >&2
-  exit 2
-fi
+# `git commit` is ALLOWED as of 2026-08-27 (owner-ratified; see
+# .claude/overseer/audit.md). Commits are the cheapest thing in git to undo, and under
+# continuous unattended operation a human-only commit step produced the opposite of a
+# review checkpoint: one undifferentiated multi-thousand-line diff nobody could read.
+#
+# The guard that matters is still above this line: the protected-branch check refuses
+# commits on main/master/production/prod/release, so work happens on a feature branch
+# and nothing reaches main without the owner merging. Publishing to a remote remains
+# ask-listed, and the forced-history patterns remain hard-denied.
+#
+# If you are re-introducing a blanket commit block, put it here — but read the audit
+# entry first, because the reason it was removed is not that it was inconvenient.
 
 exit 0
