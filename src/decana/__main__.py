@@ -36,7 +36,7 @@ def main() -> None:
         public_wss_url=settings.public_wss_url,
         artifact_dir=settings.artifact_dir,
     )
-    uvicorn.run(app, host="0.0.0.0", port=settings.port)  # noqa: S104
+    uvicorn.run(app, host="0.0.0.0", port=settings.port)
 
 
 if __name__ == "__main__":

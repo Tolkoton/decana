@@ -40,14 +40,24 @@ testpaths = ["tests"]
 # .claude/hooks/ is harness code owned by the human, not slice code. It carries
 # pre-existing findings (BLE001, PLW1510, FURB177); linting it here would block
 # every turn via the Stop hook over code this slice must not touch.
-extend-exclude = [".claude"]
+#
+# hook-checks/ is the SAME category, added 2026-08-27 in `7343c06 .claude
+# upgrade`: it is the test suite for those hooks, it arrived carrying 41 ruff
+# and 23 mypy findings of the same rule codes, and it blocked the Stop hook on
+# code no slice wrote. Excluded rather than fixed, because editing the tests
+# that audit this agent's own work is Article 7 territory and belongs to the
+# owner. Reverse this line to put it back under the gate.
+extend-exclude = [".claude", "hook-checks"]
 
 [tool.mypy]
 python_version = "3.13"
 strict = true
 # Same reasoning as the ruff exclude: the Stop hook runs bare `mypy .`, which
-# would otherwise walk .claude/hooks/ under strict mode.
+# would otherwise walk .claude/hooks/ and hook-checks/ under strict mode.
+# `files` alone is not enough -- an explicit path on the command line overrides
+# it -- so the crawl needs an exclude pattern too.
 files = ["src", "scripts"]
+exclude = ["^hook-checks/", "^\\.claude/"]
 
 # soxr ships no py.typed marker and no stubs (verified against soxr 1.1.0).
 # Scoped to this one module rather than set globally, so a genuinely untyped

@@ -21,7 +21,7 @@ from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -161,7 +161,9 @@ class RecordingFactory:
 class Recorder:
     """Captures every `CallRecord` handed to `on_call_end`, and counts the calls."""
 
-    def __init__(self, order: list[str] | None = None, raises: BaseException | None = None) -> None:
+    def __init__(
+        self, order: list[str] | None = None, raises: BaseException | None = None
+    ) -> None:
         self.records: list[CallRecord] = []
         self.order = order
         self._raises = raises
@@ -225,7 +227,7 @@ class FakeBridge:
         # server crashing for some other reason.
         try:
             self._twilio.send_media(base64.b64encode(pcm24k_bytes).decode("ascii"))
-        except Exception as exc:  # pragma: no cover - asserted to stay empty
+        except Exception as exc:  # noqa: BLE001 - the point is that it stays empty
             self.send_errors.append(exc)
         self._timing.record("chunk_forwarded_to_twilio")
 
@@ -235,7 +237,7 @@ class FakeBridge:
         # must be a silent no-op (S3-Q10), not an error and not a frame.
         try:
             self._twilio.send_media(_TEARDOWN_FLUSH)
-        except Exception as exc:  # pragma: no cover - asserted to stay empty
+        except Exception as exc:  # noqa: BLE001 - the point is that it stays empty
             self.send_errors.append(exc)
         if self.order is not None:
             # `closed` on the injected sender IS the drain-stop: after it the
@@ -699,7 +701,13 @@ def _wait_for(predicate: Callable[[], bool], timeout: float = 3.0) -> bool:
         ("twilio_send_failed", "twilio_send_failed"),
         ("error", "error: KeyError"),
     ],
-    ids=["twilio_stop", "ws_disconnect", "gemini_closed", "twilio_send_failed", "error"],
+    ids=[
+        "twilio_stop",
+        "ws_disconnect",
+        "gemini_closed",
+        "twilio_send_failed",
+        "error",
+    ],
 )
 def test_s3a_each_ending_tears_down_once_with_its_own_reason(
     profile: Profile,
@@ -790,7 +798,9 @@ def test_s3c_teardown_runs_drain_stop_then_bridge_then_gemini_then_record(
     order: list[str] = []
     recorder = Recorder(order=order)
     factory = RecordingFactory(StepClock(), order=order)
-    monkeypatch.setattr("decana.twilio.server.BridgeSession", BridgeFactory(order=order))
+    monkeypatch.setattr(
+        "decana.twilio.server.BridgeSession", BridgeFactory(order=order)
+    )
     client = TestClient(_build_app(profile, tmp_path, factory, recorder))
     client.post("/voice", data={"CallSid": "CA-3c", "From": "+447700900123"})
 
@@ -855,7 +865,11 @@ def test_s2a_greeting_backlog_and_later_chunks_arrive_in_emission_order(
     naturally takes -- and on a real call is the caller hearing the AI
     mid-sentence.
     """
-    backlog = [AudioChunk(pcm24k=b"A0"), AudioChunk(pcm24k=b"A1"), AudioChunk(pcm24k=b"A2")]
+    backlog = [
+        AudioChunk(pcm24k=b"A0"),
+        AudioChunk(pcm24k=b"A1"),
+        AudioChunk(pcm24k=b"A2"),
+    ]
     later = [AudioChunk(pcm24k=b"B0"), AudioChunk(pcm24k=b"B1")]
     factory = RecordingFactory(StepClock(), backlog=backlog, on_send=later)
     monkeypatch.setattr("decana.twilio.server.BridgeSession", BridgeFactory())
@@ -903,7 +917,9 @@ def test_s5a_a_failing_send_never_propagates_and_ends_the_call_correctly(
         assert _wait_for(lambda: bool(recorder.records))
 
     assert recorder.records[0].ended_reason == "twilio_send_failed"
-    assert bridges.made[0].send_errors == [], "send_media must never raise at its caller"
+    assert bridges.made[0].send_errors == [], (
+        "send_media must never raise at its caller"
+    )
 
 
 @pytest.mark.timeout(15)
@@ -1434,7 +1450,9 @@ def test_s14a_a_failing_factory_still_answers_with_the_disclosure_and_hangs_up(
     factory = RaisingFactory(ConnectionError("gemini is down"))
     client = TestClient(_build_app(profile, tmp_path, factory))  # type: ignore[arg-type]
 
-    response = client.post("/voice", data={"CallSid": "CA-14a", "From": "+447700900123"})
+    response = client.post(
+        "/voice", data={"CallSid": "CA-14a", "From": "+447700900123"}
+    )
 
     assert response.status_code == 200
     root = ET.fromstring(response.text)
@@ -1565,8 +1583,10 @@ def test_s8c_a_sweep_survives_the_registry_changing_under_it(
     # sweep has to be parked inside IT while the second is popped underneath.
     client.post("/voice", data={"CallSid": "CA-8c-gated", "From": "+447700900123"})
     client.post("/voice", data={"CallSid": "CA-8c-adopted", "From": "+447700900124"})
-    gated = factory.sessions[0]
-    adopted = factory.sessions[1]
+    # `session_cls=GatedLiveSession` above is what makes these casts sound; the
+    # factory's own annotation is the base class it can build in general.
+    gated = cast("GatedLiveSession", factory.sessions[0])
+    adopted = cast("GatedLiveSession", factory.sessions[1])
     gated.release = False
     adopted.release = True
     clock.advance(120)
@@ -1604,46 +1624,57 @@ def test_s8c_a_sweep_survives_the_registry_changing_under_it(
 def test_s15a_two_concurrent_calls_keep_their_own_transcripts(
     profile: Profile, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """S15.a -- two concurrent calls, reversed connect order: content traces to its own session.
+    """S15.a -- concurrent calls, out-of-order connects: content traces to its own session.
 
     This one outranks the rest in consequence. Every other seam guards against a
-    call that fails, stalls or crashes; this guards against two calls that both
-    appear to SUCCEED while one caller's mortgage details are written into the
-    other's CallRecord and sent to the operator by S5. That is a
+    call that fails, stalls or crashes; this guards against calls that all
+    appear to SUCCEED while one caller's mortgage details are written into
+    another's CallRecord and sent to the operator by S5. That is a
     data-protection incident, not an outage, and it is silent by construction.
 
-    The reversed connect order is what defeats a `registry.popitem()`
-    implementation: second-registered adopts first.
+    THREE calls in a rotated connect order, not two reversed -- and the
+    difference is the whole test. `dict.popitem()` is LIFO, so with two calls
+    "reversed connect order" is precisely the order popitem reproduces: the
+    wrong implementation this seam exists to rule out passes it, both times, by
+    construction. Verified by mutation: `registry.popitem()` survived the
+    two-call reversed version and is killed by this one on the second connect.
     """
     clock = StepClock()
+    names = ["one", "two", "three"]
     scripts: list[Sequence[LiveEvent]] = [
-        (Transcript(role="caller", text="belongs to ONE"),),
-        (Transcript(role="caller", text="belongs to TWO"),),
+        (Transcript(role="caller", text=f"belongs to {n.upper()}"),) for n in names
     ]
     factory = ScriptedFactory(clock, scripts)
     recorder = Recorder()
     monkeypatch.setattr("decana.twilio.server.BridgeSession", BridgeFactory())
     client = TestClient(_build_app(profile, tmp_path, factory, recorder, clock=clock))  # type: ignore[arg-type]
 
-    client.post("/voice", data={"CallSid": "CA-15-one", "From": "+447700900123"})
-    client.post("/voice", data={"CallSid": "CA-15-two", "From": "+447700900124"})
+    for i, name in enumerate(names):
+        client.post(
+            "/voice", data={"CallSid": f"CA-15-{name}", "From": f"+44770090012{i}"}
+        )
 
-    with client.websocket_connect("/media") as second:
-        second.send_json(_start_message("CA-15-two", stream_sid="MZ-two"))
+    # Registered one, two, three; connected three, one, two. The first connect
+    # is the reversed case; the second is the one popitem gets wrong.
+    with client.websocket_connect("/media") as third:
+        third.send_json(_start_message("CA-15-three", stream_sid="MZ-three"))
         with client.websocket_connect("/media") as first:
             first.send_json(_start_message("CA-15-one", stream_sid="MZ-one"))
+            with client.websocket_connect("/media") as second:
+                second.send_json(_start_message("CA-15-two", stream_sid="MZ-two"))
+                second.send_json({"event": "stop", "streamSid": "MZ-two"})
+                assert _wait_for(lambda: bool(recorder.records))
             first.send_json({"event": "stop", "streamSid": "MZ-one"})
-            assert _wait_for(lambda: bool(recorder.records))
-        second.send_json({"event": "stop", "streamSid": "MZ-two"})
-        assert _wait_for(lambda: len(recorder.records) == 2)
+            assert _wait_for(lambda: len(recorder.records) == 2)
+        third.send_json({"event": "stop", "streamSid": "MZ-three"})
+        assert _wait_for(lambda: len(recorder.records) == 3)
 
     by_sid = {r.call_sid: r for r in recorder.records}
-    assert by_sid["CA-15-one"].transcript == (
-        TranscriptTurn(role="caller", text="belongs to ONE"),
-    )
-    assert by_sid["CA-15-two"].transcript == (
-        TranscriptTurn(role="caller", text="belongs to TWO"),
-    )
+    assert set(by_sid) == {"CA-15-one", "CA-15-two", "CA-15-three"}
+    for name in names:
+        assert by_sid[f"CA-15-{name}"].transcript == (
+            TranscriptTurn(role="caller", text=f"belongs to {name.upper()}"),
+        )
 
 
 @pytest.mark.timeout(20)
@@ -1654,29 +1685,41 @@ def test_s15b_each_call_adopts_the_session_its_own_webhook_opened(
 
     Identity, not content. S15.a would still pass a registry that happened to
     hand out the right transcripts for another reason; only `is` proves the
-    lookup is keyed by the start message's CallSid.
+    lookup is keyed by the start message's CallSid. Same rotated three-call
+    order, for the same reason: two reversed connects cannot discriminate LIFO.
     """
     clock = StepClock()
-    factory = ScriptedFactory(clock, [(), ()])
+    names = ["one", "two", "three"]
+    factory = ScriptedFactory(clock, [(), (), ()])
     bridges = BridgeFactory()
     monkeypatch.setattr("decana.twilio.server.BridgeSession", bridges)
     client = TestClient(_build_app(profile, tmp_path, factory, clock=clock))  # type: ignore[arg-type]
 
-    client.post("/voice", data={"CallSid": "CA-15b-one", "From": "+447700900123"})
-    client.post("/voice", data={"CallSid": "CA-15b-two", "From": "+447700900124"})
+    for i, name in enumerate(names):
+        client.post(
+            "/voice", data={"CallSid": f"CA-15b-{name}", "From": f"+44770090012{i}"}
+        )
+    opened = {name: factory.sessions[i] for i, name in enumerate(names)}
 
-    with client.websocket_connect("/media") as second:
-        second.send_json(_start_message("CA-15b-two", stream_sid="MZ-two"))
+    adopted: dict[str, Any] = {}
+    with client.websocket_connect("/media") as third:
+        third.send_json(_start_message("CA-15b-three", stream_sid="MZ-three"))
         assert _wait_for(lambda: len(bridges.made) == 1)
+        adopted["three"] = bridges.made[0].gemini
         with client.websocket_connect("/media") as first:
             first.send_json(_start_message("CA-15b-one", stream_sid="MZ-one"))
             assert _wait_for(lambda: len(bridges.made) == 2)
+            adopted["one"] = bridges.made[1].gemini
+            with client.websocket_connect("/media") as second:
+                second.send_json(_start_message("CA-15b-two", stream_sid="MZ-two"))
+                assert _wait_for(lambda: len(bridges.made) == 3)
+                adopted["two"] = bridges.made[2].gemini
+                second.send_json({"event": "stop", "streamSid": "MZ-two"})
             first.send_json({"event": "stop", "streamSid": "MZ-one"})
-        second.send_json({"event": "stop", "streamSid": "MZ-two"})
+        third.send_json({"event": "stop", "streamSid": "MZ-three"})
 
-    # Connect order is reversed, so bridge 0 drives session 1 and vice versa.
-    assert bridges.made[0].gemini is factory.sessions[1]
-    assert bridges.made[1].gemini is factory.sessions[0]
+    for name in names:
+        assert adopted[name] is opened[name], f"{name} adopted another call's session"
 
 
 @pytest.mark.timeout(30)

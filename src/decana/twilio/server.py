@@ -304,7 +304,7 @@ def create_app(
 
         try:
             session = await live_factory(profile)
-        except Exception as exc:  # noqa: BLE001 -- see _render_hangup_twiml
+        except Exception as exc:
             # `open_live_session` raises on connect-time failure deliberately
             # (`live.py:352-354`). Registering nothing is the load-bearing half:
             # a `_Pending` left behind would let a later WS `start` adopt a
@@ -362,9 +362,11 @@ def create_app(
         except WebSocketDisconnect:
             reason = "ws_disconnect"
             logger.info("socket disconnected")
-        except Exception as exc:  # noqa: BLE001 -- ratified `error: <type>` ending
+        except Exception as exc:
             reason = f"error: {type(exc).__name__}"
-            logger.exception("media socket failed for call %s", getattr(call, "call_sid", "?"))
+            logger.exception(
+                "media socket failed for call %s", getattr(call, "call_sid", "?")
+            )
         finally:
             if call is not None:
                 await _teardown(call, reason)
@@ -453,7 +455,7 @@ def create_app(
                         "media": {"payload": payload},
                     }
                 )
-            except Exception:  # noqa: BLE001 -- ratified `twilio_send_failed` ending
+            except Exception:
                 logger.exception("outbound send failed for call %s", call.call_sid)
                 await _teardown(call, "twilio_send_failed")
                 return
@@ -487,7 +489,7 @@ def create_app(
         """
         try:
             call.bridge.close()
-        except Exception as exc:  # noqa: BLE001 -- ratified `error: <type>` ending
+        except Exception as exc:
             logger.exception("BridgeSession.close() failed for call %s", call.call_sid)
             return f"error: {type(exc).__name__}"
         return reason
@@ -513,7 +515,7 @@ def create_app(
         )
         try:
             await on_call_end(record)
-        except Exception as exc:  # noqa: BLE001 -- ratified guarantee (b)
+        except Exception as exc:
             logger.exception(
                 "on_call_end raised %s for call %s",
                 type(exc).__name__,
