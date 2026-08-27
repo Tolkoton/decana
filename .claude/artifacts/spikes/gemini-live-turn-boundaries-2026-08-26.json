@@ -1,0 +1,955 @@
+{
+ "spike": "gemini-live-turn-boundaries",
+ "slice": "S2 gemini-live",
+ "run_at": "2026-08-26T21:40:00Z",
+ "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+ "sdk": "google-genai 2.20.0",
+ "question": "How does Gemini Live signal TRANSCRIPT TURN BOUNDARIES? S2 must emit one Transcript per turn, but transcripts arrive as fragments, so a flush rule is needed.",
+ "method": "Real Live API, mortgage-broker conversation.md as system_instruction, both transcription configs enabled. Phase A: greeting turn (model speaks unprompted). Phase B: the model's own greeting audio resampled 24k->16k with the project's Resampler and fed back as caller audio at 20ms pacing.",
+ "findings": {
+  "transcription_finished_never_set": {
+   "verdict": "FALSIFIED as a usable signal",
+   "output_fragments": 13,
+   "input_fragments": 23,
+   "fragments_with_finished_true": 0,
+   "note": "Transcription.finished exists on the type and is never populated. Reasoning from the signature would have produced an accumulator that never flushes."
+  },
+  "model_turn_terminator": {
+   "signal": "server_content.turn_complete",
+   "occurrences": 1,
+   "at_ms": [
+    9448
+   ]
+  },
+  "generation_complete": {
+   "occurrences": 1,
+   "at_ms": [
+    7841
+   ],
+   "note": "Arrives ~1.6s BEFORE turn_complete. About generation, not the turn."
+  },
+  "caller_turn_terminator": {
+   "verdict": "NONE EXISTS",
+   "note": "Phase B drain held 45s after the last input fragment with no terminator of any kind. This is why S2 flushes the caller turn on ROLE SWITCH."
+  },
+  "waiting_for_input": {
+   "occurrences": 0
+  },
+  "interrupted": {
+   "occurrences": 0,
+   "note": "Never fired. Barge-in behaviour remains unverified (slice premise P10, accepted as risk)."
+  }
+ },
+ "consequence_for_s2": "Flush rule: model turn on turn_complete; caller turn on role switch (first output fragment after >=1 input fragment); any open turn at session close, before Closed.",
+ "event_log": [
+  {
+   "at": 2912,
+   "phase": "A",
+   "output_transcription": {
+    "text": "Hello, are",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 3735,
+   "phase": "A",
+   "output_transcription": {
+    "text": " you",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 3963,
+   "phase": "A",
+   "audio_bytes": 46080
+  },
+  {
+   "at": 3964,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 3965,
+   "phase": "A",
+   "output_transcription": {
+    "text": " looking",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 3965,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 3966,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 3966,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 3966,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4121,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4121,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4122,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4122,
+   "phase": "A",
+   "output_transcription": {
+    "text": " to buy",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 4123,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4124,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4124,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4347,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4347,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4348,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4349,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4349,
+   "phase": "A",
+   "output_transcription": {
+    "text": " your first",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 4349,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4350,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4351,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4476,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4477,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4478,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4478,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4665,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4666,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4667,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4667,
+   "phase": "A",
+   "output_transcription": {
+    "text": " home,",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 4668,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4669,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4669,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4793,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4794,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4795,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4795,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4919,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4920,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4920,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 4920,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5047,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5048,
+   "phase": "A",
+   "output_transcription": {
+    "text": " move",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 5049,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5049,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5050,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5237,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5238,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5239,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5239,
+   "phase": "A",
+   "output_transcription": {
+    "text": " house,",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 5240,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5240,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5241,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5365,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5366,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5366,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5367,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5522,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5523,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5524,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5524,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5525,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5712,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5713,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5713,
+   "phase": "A",
+   "output_transcription": {
+    "text": " remortgage,",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 5714,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5715,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5715,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5716,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5870,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5871,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5872,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5872,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5872,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5994,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5995,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5996,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 5997,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6122,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6122,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6123,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6124,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6282,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6283,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6283,
+   "phase": "A",
+   "output_transcription": {
+    "text": " or",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 6284,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6284,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6284,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6508,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6509,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6510,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6510,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6511,
+   "phase": "A",
+   "output_transcription": {
+    "text": " perhaps",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 6512,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6512,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6512,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6636,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6637,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6638,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6638,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6850,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6851,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6852,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6852,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6852,
+   "phase": "A",
+   "output_transcription": {
+    "text": " buy to",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 6853,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6854,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6855,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6891,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6892,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6977,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6977,
+   "phase": "A",
+   "output_transcription": {
+    "text": " let?",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 6978,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6978,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6979,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 6997,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7040,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7041,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7103,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7103,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7103,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7167,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7168,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7168,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7211,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7212,
+   "phase": "A",
+   "audio_bytes": 1920
+  },
+  {
+   "at": 7841,
+   "phase": "A",
+   "generation_complete": "True"
+  },
+  {
+   "at": 9448,
+   "phase": "A",
+   "turn_complete": "True"
+  },
+  {
+   "at": 15215,
+   "phase": "B",
+   "input_transcription": {
+    "text": " He",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15215,
+   "phase": "B",
+   "input_transcription": {
+    "text": "llo",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15216,
+   "phase": "B",
+   "input_transcription": {
+    "text": ",",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15216,
+   "phase": "B",
+   "input_transcription": {
+    "text": " are",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15216,
+   "phase": "B",
+   "input_transcription": {
+    "text": " you",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15217,
+   "phase": "B",
+   "input_transcription": {
+    "text": " loo",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15217,
+   "phase": "B",
+   "input_transcription": {
+    "text": "king",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15217,
+   "phase": "B",
+   "input_transcription": {
+    "text": " to",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15217,
+   "phase": "B",
+   "input_transcription": {
+    "text": " buy",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15218,
+   "phase": "B",
+   "input_transcription": {
+    "text": " your",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15218,
+   "phase": "B",
+   "input_transcription": {
+    "text": " first",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15218,
+   "phase": "B",
+   "input_transcription": {
+    "text": " home",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15218,
+   "phase": "B",
+   "input_transcription": {
+    "text": "?",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15219,
+   "phase": "B",
+   "input_transcription": {
+    "text": " Mo",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15219,
+   "phase": "B",
+   "input_transcription": {
+    "text": "ve",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15219,
+   "phase": "B",
+   "input_transcription": {
+    "text": " house",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15219,
+   "phase": "B",
+   "input_transcription": {
+    "text": ",",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15220,
+   "phase": "B",
+   "input_transcription": {
+    "text": " re",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15220,
+   "phase": "B",
+   "input_transcription": {
+    "text": "mor",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15221,
+   "phase": "B",
+   "input_transcription": {
+    "text": "tga",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15221,
+   "phase": "B",
+   "input_transcription": {
+    "text": "ge",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15221,
+   "phase": "B",
+   "input_transcription": {
+    "text": ", or",
+    "finished": null,
+    "speaker_label": null
+   }
+  },
+  {
+   "at": 15227,
+   "phase": "B",
+   "input_transcription": {
+    "text": " per",
+    "finished": null,
+    "speaker_label": null
+   }
+  }
+ ]
+}
