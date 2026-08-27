@@ -107,6 +107,26 @@ moment it was extended. Where two sections of an artifact restate the same conte
 diff them mechanically rather than reading both attentively; that transcription step is
 where clauses die silently.
 
+**A third instance, and the sharpest one: an assertion written before the code exists is
+treated as established the moment it goes green.** (Owner-ratified 2026-08-27.) In
+`twilio-server`, an `app` fixture injected a `live_factory` that raised
+`AssertionError("live_factory must not run for these tests")`. That asserts the
+*opposite* of ratified contract text — S3-Q1 says `POST /voice` opens the Live session —
+and it passed for exactly as long as the webhook was an empty stub. It failed the moment
+the endpoint was implemented **correctly**, and the instinct at that point is to
+"fix" the code back toward the guard.
+
+This is the same shape as the exit criterion that named four test functions, three of
+which did not exist: **text written before the thing it describes, never checked against
+the contract, and promoted to established by a green run.** A green suite is evidence
+that code and tests agree, not that either matches what was ratified.
+
+**How to apply.** When you write a fixture or guard asserting something must **NOT**
+happen, check it against the contract before you write it — a guard that passes because
+nothing is implemented yet proves nothing at all. And when a newly-correct
+implementation breaks an older assertion, the first question is which one the contract
+supports, not which one is older.
+
 **Citations (per the citation-or-prune rule above):**
 - `ledger.md` 2026-08-27T09:00:00Z — twilio-server — PLANNING_COMPLETE, category
   `strategy`. 17 findings across 20 rounds, the enumeration axes, and both cold-reader
