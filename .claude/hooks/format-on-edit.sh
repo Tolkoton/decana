@@ -66,11 +66,15 @@ fi
 # ---------------------------------------------------------------------------
 BASENAME=$(basename "$FILE_PATH")
 EXT="${BASENAME##*.}"
-EXT=$(echo "$EXT" | tr '[:upper:]' '[:lower:]')
 
 # If filename has no extension, EXT equals BASENAME — treat as no extension.
+# Compare BEFORE lowercasing: lowercasing first breaks this test for any
+# extensionless name containing a capital ("Makefile" gave EXT="makefile" vs
+# BASENAME="Makefile"), so the whole filename leaked through as an extension.
 if [ "$EXT" = "$BASENAME" ]; then
   EXT=""
+else
+  EXT=$(echo "$EXT" | tr '[:upper:]' '[:lower:]')
 fi
 
 # ---------------------------------------------------------------------------
@@ -82,8 +86,15 @@ if [ -n "$FORMAT_CMD" ] && [ -n "$CODE_EXTENSIONS" ]; then
     configured_ext=$(echo "$configured_ext" | tr '[:upper:]' '[:lower:]' | sed 's/^\.//')
     if [ "$EXT" = "$configured_ext" ]; then
       # Replace {file} placeholder with the actual path
-      CMD="${FORMAT_CMD/\{file\}/$FILE_PATH}"
-      eval "$CMD" 2>/dev/null || true
+      # printf %q, not a bare expansion: the result is eval'd, so a path
+      # containing a space would otherwise split into two arguments and the
+      # formatter would run on the wrong target.
+      CMD="${FORMAT_CMD/\{file\}/$(printf '%q' "$FILE_PATH")}"
+      # stdout, not just stderr: stdout is the hook protocol channel, and a
+      # chatty formatter ("1 file reformatted") would leak into the session on
+      # every single edit. This hook never reports, so neither stream has a
+      # consumer.
+      eval "$CMD" >/dev/null 2>&1 || true
       exit 0
     fi
   done
@@ -98,16 +109,16 @@ case "$FILE_PATH" in
     # If we reached here, FORMAT_CMD either wasn't set or didn't match this
     # extension — use Python built-in auto-detect regardless.
     if [ -f uv.lock ] && command -v uv >/dev/null 2>&1; then
-      uv run ruff format "$FILE_PATH" 2>/dev/null || true
-      uv run ruff check --fix --select I "$FILE_PATH" 2>/dev/null || true
+      uv run ruff format "$FILE_PATH" >/dev/null 2>&1 || true
+      uv run ruff check --fix --select I "$FILE_PATH" >/dev/null 2>&1 || true
     elif [ -f poetry.lock ] && command -v poetry >/dev/null 2>&1; then
-      poetry run ruff format "$FILE_PATH" 2>/dev/null || true
-      poetry run ruff check --fix --select I "$FILE_PATH" 2>/dev/null || true
+      poetry run ruff format "$FILE_PATH" >/dev/null 2>&1 || true
+      poetry run ruff check --fix --select I "$FILE_PATH" >/dev/null 2>&1 || true
     elif command -v ruff >/dev/null 2>&1; then
-      ruff format "$FILE_PATH" 2>/dev/null || true
-      ruff check --fix --select I "$FILE_PATH" 2>/dev/null || true
+      ruff format "$FILE_PATH" >/dev/null 2>&1 || true
+      ruff check --fix --select I "$FILE_PATH" >/dev/null 2>&1 || true
     elif command -v black >/dev/null 2>&1; then
-      black --quiet "$FILE_PATH" 2>/dev/null || true
+      black --quiet "$FILE_PATH" >/dev/null 2>&1 || true
     fi
     ;;
   *.json)
@@ -122,7 +133,7 @@ case "$FILE_PATH" in
     ;;
   *.md|*.yml|*.yaml|*.toml)
     if command -v prettier >/dev/null 2>&1; then
-      prettier --write --log-level silent "$FILE_PATH" 2>/dev/null || true
+      prettier --write --log-level silent "$FILE_PATH" >/dev/null 2>&1 || true
     fi
     ;;
 esac

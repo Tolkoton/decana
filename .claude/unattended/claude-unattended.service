@@ -1,0 +1,47 @@
+// systemd unit for the Linux server (D-1).
+//
+// NOT TESTED — the machine this was authored on is macOS and has no systemd.
+// The logic under test is supervisor.sh, which this unit only launches; the
+// restart policy deliberately lives in the script, not here, because only the
+// script can read state.json to tell "finished" from "died".
+//
+//   sudo cp claude-unattended.service /etc/systemd/system/
+//   sudo systemctl daemon-reload
+//   sudo systemctl enable --now claude-unattended
+//   journalctl -u claude-unattended -f
+//
+// Strip these // lines before installing — systemd wants # comments.
+
+[Unit]
+Description=Claude Code unattended supervisor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=CHANGEME
+WorkingDirectory=/srv/CHANGEME
+Environment=CLAUDE_PROJECT_DIR=/srv/CHANGEME
+ExecStart=/srv/CHANGEME/.claude/unattended/supervisor.sh
+
+// Restart only on a genuine failure of the SUPERVISOR itself. The supervisor
+// exits 0 for every legitimate stop (finished / parked / halted), and systemd
+// must not resurrect those — that would defeat the whole terminal-state design.
+Restart=on-failure
+RestartSec=60
+// Backstop under the script's own rolling cap.
+StartLimitIntervalSec=3600
+StartLimitBurst=5
+
+// The agent writes inside the project only.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/srv/CHANGEME
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

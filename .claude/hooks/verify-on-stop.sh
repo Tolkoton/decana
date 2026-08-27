@@ -15,48 +15,6 @@ if echo "$INPUT" | jq -e '.stop_hook_active == true' >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
-# TDD RED gate
-# ---------------------------------------------------------------------------
-# In strict TDD a RED turn ENDS on a deliberately failing test — that failure is
-# the checkpoint, not a defect. Without this gate the hook blocks every RED and
-# forces RED and GREEN into a single turn, which destroys the review point
-# between "here is the test" and "here is the implementation" — the one moment
-# where redirecting is still cheap.
-#
-# Skips the TEST step ONLY. Lint and typecheck still run and still block: a
-# deliberately failing test must still be well-formed, correctly typed code.
-# This is what keeps the sentinel from becoming a general-purpose bypass.
-#
-# Read from the envelope's `last_assistant_message` rather than the transcript
-# JSONL: the transcript is flushed asynchronously, so a hook parsing it races
-# the writer and reads a stale or empty turn (anthropics/claude-code#15813).
-# overseer_stop.py hit exactly this and made the same choice — see its module
-# docstring. Keep the two hooks agreeing on where turn text comes from.
-#
-# KNOWN LIMIT — the sentinel is a bypass with no counterparty. Nothing here
-# verifies that a turn claiming RED actually produced a FAILING TEST. A turn
-# that wrote no test at all, or wrote a passing one, or broke something
-# unrelated, gets the identical skip just by emitting the line. The two-signal
-# trigger overseer_stop.py uses (sentinel AND structural tool evidence) is the
-# obvious shape for closing this, and it is deliberately NOT built yet.
-#
-# So this gate rests on the developer's honesty about what kind of turn it is.
-# That is an acceptable trade for ONE skipped step and no others. It stops being
-# acceptable the moment the skip is widened. If you are here to make the
-# sentinel also skip lint, typecheck, or a subset of tests: build the
-# counterparty first. Widening an unverified bypass is how a verification hook
-# quietly becomes decorative.
-SKIP_TESTS=false
-LAST_MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // ""' 2>/dev/null || echo "")
-if printf '%s\n' "$LAST_MSG" | grep -qE '^[[:space:]]*=== TDD RED ===[[:space:]]*$'; then
-  SKIP_TESTS=true
-  # stderr, NOT stdout: the block path below writes JSON to stdout, and any
-  # stray stdout line would corrupt it into an unparseable hook response.
-  echo "⚠ verify-on-stop: '=== TDD RED ===' sentinel present — TEST step skipped." >&2
-  echo "  Lint and typecheck still ran. Tests must be green by the GREEN turn." >&2
-fi
-
-# ---------------------------------------------------------------------------
 # Resolve project root: CLAUDE_PROJECT_DIR → git → CWD
 # ---------------------------------------------------------------------------
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-}"
@@ -169,19 +127,19 @@ if [ "$USE_CONFIGURED" = true ]; then
   # --- Configured path: run whatever the project declared ---
 
   if [ -n "$LINT_CMD" ]; then
-    if ! eval "$LINT_CMD" 2>/tmp/claude-lint.log >/tmp/claude-lint.log; then
+    if ! eval "$LINT_CMD" >/tmp/claude-lint.log 2>&1; then
       ERRORS="${ERRORS}LINT FAILED (${LINT_CMD}):\n$(tail -30 /tmp/claude-lint.log)\n\n"
     fi
   fi
 
   if [ -n "$TYPECHECK_CMD" ]; then
-    if ! eval "$TYPECHECK_CMD" 2>/tmp/claude-typecheck.log >/tmp/claude-typecheck.log; then
+    if ! eval "$TYPECHECK_CMD" >/tmp/claude-typecheck.log 2>&1; then
       ERRORS="${ERRORS}TYPECHECK FAILED (${TYPECHECK_CMD}):\n$(tail -30 /tmp/claude-typecheck.log)\n\n"
     fi
   fi
 
-  if [ -z "$ERRORS" ] && [ -n "$TEST_CMD" ] && [ "$SKIP_TESTS" = false ]; then
-    if ! eval "$TEST_CMD" 2>/tmp/claude-test.log >/tmp/claude-test.log; then
+  if [ -z "$ERRORS" ] && [ -n "$TEST_CMD" ]; then
+    if ! eval "$TEST_CMD" >/tmp/claude-test.log 2>&1; then
       ERRORS="${ERRORS}TESTS FAILED (${TEST_CMD}):\n$(tail -40 /tmp/claude-test.log)\n\n"
     fi
   fi
@@ -206,22 +164,22 @@ else
 
   # 1. Ruff lint (fast)
   if [ -f pyproject.toml ] && grep -q '\[tool\.ruff' pyproject.toml 2>/dev/null; then
-    if ! $PREFIX ruff check . 2>/tmp/claude-ruff.log >/tmp/claude-ruff.log; then
+    if ! $PREFIX ruff check . >/tmp/claude-ruff.log 2>&1; then
       ERRORS="${ERRORS}LINT FAILED (ruff check):\n$(tail -30 /tmp/claude-ruff.log)\n\n"
     fi
   fi
 
   # 2. Mypy typecheck
   if [ -f pyproject.toml ] && grep -q '\[tool\.mypy' pyproject.toml 2>/dev/null; then
-    if ! $PREFIX mypy . 2>/tmp/claude-mypy.log >/tmp/claude-mypy.log; then
+    if ! $PREFIX mypy . >/tmp/claude-mypy.log 2>&1; then
       ERRORS="${ERRORS}TYPECHECK FAILED (mypy):\n$(tail -30 /tmp/claude-mypy.log)\n\n"
     fi
   fi
 
-  # 3. Tests (only if previous checks passed, and not a declared RED turn)
-  if [ -z "$ERRORS" ] && [ "$SKIP_TESTS" = false ]; then
+  # 3. Tests (only if previous checks passed)
+  if [ -z "$ERRORS" ]; then
     if [ -d tests ] || [ -d test ]; then
-      if ! $PREFIX pytest -x --no-header -q 2>/tmp/claude-pytest.log >/tmp/claude-pytest.log; then
+      if ! $PREFIX pytest -x --no-header -q >/tmp/claude-pytest.log 2>&1; then
         ERRORS="${ERRORS}TESTS FAILED (pytest):\n$(tail -40 /tmp/claude-pytest.log)\n\n"
       fi
     fi
@@ -240,11 +198,7 @@ EOF
 fi
 
 echo ""
-if [ "$SKIP_TESTS" = true ]; then
-  echo "✓ verify-on-stop: lint + typecheck passed — TESTS SKIPPED (=== TDD RED === turn)"
-else
-  echo "✓ verify-on-stop: all checks passed"
-fi
+echo "✓ verify-on-stop: all checks passed"
 echo "  Files changed: $CODE_CHANGED"
 echo "  Ready for your review. Run:  git diff   then   git add ...   then   git commit"
 

@@ -20,3 +20,4 @@ venv/
 # when planning ends. Committing it would freeze one session's phase for everyone.
 .claude/overseer/state
 
+.foe-*

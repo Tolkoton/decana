@@ -57,6 +57,33 @@ def emit(result: dict) -> None:
         sys.exit(1)
 
 
+def fail_open(why: str) -> None:
+    """Allow the call instead of deferring to the normal permission flow.
+
+    WHY: `sys.exit(1)` means "hook did not decide", which hands the call to the
+    interactive permission prompt. Unattended, nobody answers that prompt and
+    the whole run hangs on a read-only web fetch — the failure this hook exists
+    to prevent, reintroduced through its own error paths.
+
+    SAFE BECAUSE the only thing being allowed is WebFetch/WebSearch. Two things
+    keep that true, and both must hold:
+      1. settings.json wires this hook with matcher "WebFetch|WebSearch", so it
+         is never consulted about any other tool.
+      2. The explicit guard in main() re-checks tool_name and exits 1 for
+         anything else — that guard is the real security boundary and is
+         deliberately NOT fail-open.
+    If you ever widen the matcher, revisit this function first.
+    """
+    log(f"failing open ({why}) — allowing rather than hanging on a prompt")
+    emit({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "allow",
+            "permissionDecisionReason": f"Auto-approved (fail-open: {why})",
+        }
+    })
+
+
 def handle_pre_tool_use(tool: str, tool_input: dict) -> None:
     updated_input = None
 
@@ -101,17 +128,20 @@ def main() -> None:
     try:
         data = json.load(sys.stdin)
     except json.JSONDecodeError as e:
-        log(f"invalid JSON input: {e}")
-        sys.exit(1)
+        fail_open(f"invalid JSON input: {e}")
+        return
     except Exception as e:
-        log(f"failed to read stdin: {e}")
-        sys.exit(1)
+        fail_open(f"failed to read stdin: {e}")
+        return
 
     event = data.get("hook_event_name", "")
     tool = data.get("tool_name", "")
     tool_input = data.get("tool_input") or {}
 
-    # SECURITY: handle ONLY WebFetch and WebSearch
+    # SECURITY: handle ONLY WebFetch and WebSearch.
+    # This guard is the security boundary and is deliberately NOT fail-open —
+    # a tool outside this hook's remit must fall through to the normal
+    # permission flow, never be allowed by it.
     if tool not in ("WebFetch", "WebSearch"):
         sys.exit(1)
 
@@ -120,8 +150,9 @@ def main() -> None:
     elif event == "PermissionRequest":
         handle_permission_request()
     else:
-        log(f"unknown event: {event}")
-        sys.exit(1)
+        # Tool is already confirmed in-remit above, so allowing is safe and
+        # deferring is not: an unrecognized event name must not hang the run.
+        fail_open(f"unknown event: {event}")
 
 
 if __name__ == "__main__":
@@ -130,5 +161,4 @@ if __name__ == "__main__":
     except SystemExit:
         raise
     except Exception as e:
-        log(f"unexpected error: {e}")
-        sys.exit(1)
+        fail_open(f"unexpected error: {e}")
