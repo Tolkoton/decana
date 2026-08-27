@@ -1042,6 +1042,17 @@ branches, as a log-only no-op (feature Q4), and that no-op status is exactly wha
 it easy to omit: there is nothing to *do*, so there is nothing that visibly breaks in
 review.
 
+**Correction from implementation (2026-08-27, decide-and-log):** the named wrong
+implementation — a `match`/dict dispatch that raises on the missing arm — **is not
+reachable in the shipped shape.** The router is an `isinstance` elif-chain, where an
+unmatched member falls through and does nothing, which is already the ratified
+behaviour. Mutation-verified: disabling the `Interrupted` arm survives the whole suite,
+because it reproduces the no-op rather than a crash. That is a *better* property than
+the seam assumed, not a gap — but it means the seam's stated falsifier is void, and the
+real one is the opposite error: treating a barge-in as an ending. Mutating
+`Interrupted` into a `_teardown` call is killed by S13.a and S13.b together. The
+assertions are unchanged; only the named wrong-implementation is corrected.
+
 Test approach: the fake `LiveSession` interleaves `Interrupted()` between `AudioChunk`
 and `Transcript` events mid-call. Assert (a) no exception escapes the event-consumption
 path, (b) it is logged and otherwise a no-op, (c) `_teardown` did **not** run, (d) the
@@ -1095,11 +1106,19 @@ caller's `CallRecord` — which is then sent to the operator by S5. That is a
 data-protection incident, not an outage, and it is silent by construction: nothing in
 the logs, the timing JSONL, or the record itself looks wrong.
 
-Test approach: two **distinguishable** fake sessions — each emits a transcript naming
-its own `CallSid` — registered via two `POST /voice` calls with distinct `CallSid`s,
-then two WS connections opened concurrently via `asyncio.gather` in the *reverse* order
-(second-registered adopts first), which is what defeats a most-recent-entry
-implementation. Assert each `CallRecord.call_sid` matches the transcript content that
+**Correction from implementation (2026-08-27, decide-and-log): two calls cannot
+discriminate, and "reverse order" was the wrong order.** Mutation-verified: with two
+registered calls, a LIFO `registry.popitem()` is *matched by luck* when the
+last-registered connects first — which is exactly what "reverse order" specified — so
+the mutation survived. Correcting to registration order killed LIFO but then let a FIFO
+`next(iter(registry))` survive for the mirror-image reason. **Three calls, with the
+MIDDLE one connecting first, is the smallest configuration that kills both**, because
+that order is neither first nor last. The seam's assertion is unchanged; its setup was
+too weak to reach it.
+
+Test approach: three **distinguishable** fake sessions — each emits a transcript naming
+its own `CallSid` — registered via three `POST /voice` calls, then adopted in the order
+middle, first, last. Assert each `CallRecord.call_sid` matches the transcript content that
 belongs to it, and that each adopted session `is` the object its own factory call
 returned. Rules out both wrong implementations, and the reversed connect order is what
 makes the assertion sharp rather than accidentally satisfied.

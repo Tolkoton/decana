@@ -18,7 +18,8 @@ import asyncio
 import logging
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
-from dataclasses import dataclass
+from contextlib import suppress
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
@@ -29,9 +30,9 @@ from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from decana.bridge.resampler import inbound_resampler, outbound_resampler
 from decana.bridge.session import BridgeSession
 from decana.bridge.timing import TimingRecorder
-from decana.gemini.live import LiveEvent
+from decana.gemini.live import AudioChunk, Closed, Interrupted, LiveEvent, Transcript
 from decana.profile.model import Profile
-from decana.twilio.records import OnCallEnd
+from decana.twilio.records import CallRecord, OnCallEnd, TranscriptTurn
 
 __all__ = ["LiveSession", "LiveSessionFactory", "create_app"]
 
@@ -83,6 +84,11 @@ class _Call:
     bridge: BridgeSession
     sender: "_SocketSender"
     started_at: datetime
+    timing_path: Path
+    transcript: list[TranscriptTurn] = field(default_factory=list)
+    done: bool = False
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    tasks: list[asyncio.Task[None]] = field(default_factory=list)
 
 
 _E164 = re.compile(r"^\+[1-9]\d{1,14}$")
@@ -141,8 +147,14 @@ async def _sweep_expired(
     for call_sid, pending in list(registry.items()):
         if (now - pending.registered_at).total_seconds() <= ttl_s:
             continue
+        # Claim BEFORE closing. The pop is what makes this sweeper the owner of
+        # the entry; whoever pops it is the only one that closes it. Closing
+        # first and popping after lets two concurrent sweeps both close the same
+        # session -- the guarded pop keeps the dict consistent but does nothing
+        # about the duplicate close, which S8.c caught.
+        if registry.pop(call_sid, None) is None:
+            continue
         await pending.session.close()
-        registry.pop(call_sid, None)
 
 
 async def _register(
@@ -184,6 +196,19 @@ def _render_twiml(profile: Profile, public_wss_url: str, caller: str) -> str:
     return tostring(response, encoding="unicode")
 
 
+def _render_hangup_twiml(profile: Profile) -> str:
+    """Speak the disclosure, then hang up -- the answer when no session could open.
+
+    The compliance line is spoken even on the failure path: it is the one thing
+    the caller is owed regardless of whether the AI can talk to them.
+    """
+    response = Element("Response")
+    say = SubElement(response, "Say")
+    say.text = profile.disclosure
+    SubElement(response, "Hangup")
+    return tostring(response, encoding="unicode")
+
+
 def create_app(
     profile: Profile,
     live_factory: LiveSessionFactory,
@@ -213,7 +238,20 @@ def create_app(
         now = clock()
         await _sweep_expired(registry, now=now, ttl_s=pending_ttl_s)
 
-        session = await live_factory(profile)
+        try:
+            session = await live_factory(profile)
+        except Exception:
+            # `open_live_session` raises on connect-time failure deliberately, so
+            # S3 sees it rather than receiving a `Closed` for a session that never
+            # opened. A 500 here makes Twilio play its own error message instead
+            # of the compliance disclosure, and registering nothing keeps a later
+            # stray socket on S3-Q5's fail-loudly path.
+            logger.exception("live_factory failed for CallSid %s", call_sid)
+            return Response(
+                content=_render_hangup_twiml(profile),
+                media_type="application/xml",
+            )
+
         await _register(registry, call_sid, session, now=now)
 
         return Response(
@@ -238,6 +276,7 @@ def create_app(
         """Flow: accept, dispatch inbound messages, tear down once."""
         await websocket.accept()
         call: _Call | None = None
+        ending = "ws_disconnect"
         try:
             while True:
                 message = await websocket.receive_json()
@@ -247,18 +286,26 @@ def create_app(
                     call = await _begin_call(websocket, message)
                     if call is None:
                         break
+                    call.tasks = [
+                        asyncio.create_task(_pump_events(call, websocket)),
+                        asyncio.create_task(_drain_outbound(call, websocket)),
+                    ]
                 elif event == "media" and call is not None:
                     call.bridge.handle_twilio_frame(message["media"]["payload"])
                 elif event == "stop":
+                    ending = "twilio_stop"
                     break
                 # `connected` carries only protocol/version -- nothing to bind a
                 # call to yet. `mark` and `dtmf` are ignored per guarantee (d).
                 # All three are deliberate no-ops, not forgotten cases.
         except WebSocketDisconnect:
-            logger.info("socket disconnected")
+            ending = "ws_disconnect"
+        except Exception as exc:
+            logger.exception("unexpected failure in the media socket")
+            ending = f"error: {type(exc).__name__}"
         finally:
             if call is not None:
-                await _teardown(call)
+                await _teardown(call, ending, websocket)
 
     async def _begin_call(
         websocket: WebSocket, message: dict[str, Any]
@@ -283,9 +330,8 @@ def create_app(
             str(start.get("customParameters", {}).get("caller", ""))
         )
         sender = _SocketSender(stream_sid)
-        timing = TimingRecorder(
-            clock=clock, sink_path=artifact_dir / f"{call_sid}.jsonl"
-        )
+        timing_path = artifact_dir / f"{call_sid}.jsonl"
+        timing = TimingRecorder(clock=clock, sink_path=timing_path)
         bridge = BridgeSession(
             twilio=sender,
             gemini=session,
@@ -302,12 +348,122 @@ def create_app(
             bridge=bridge,
             sender=sender,
             started_at=now,
+            timing_path=timing_path,
         )
 
-    async def _teardown(call: "_Call") -> None:
-        """Flow: stop sending, flush the bridge, close Gemini, hand off the record."""
-        call.sender.closed = True
-        call.bridge.close()
-        await call.session.close()
+    async def _pump_events(call: "_Call", websocket: WebSocket) -> None:
+        """Route S2's event stream by type, for the life of the session.
+
+        The ratified routing table, and every member of `LiveEvent` is here on
+        purpose: an omitted arm raises mid-call the first time a caller talks over
+        the model, which is ordinary on a phone call rather than exceptional.
+        """
+        try:
+            async for event in call.session.events():
+                if isinstance(event, AudioChunk):
+                    call.bridge.handle_gemini_chunk(event.pcm24k)
+                elif isinstance(event, Transcript):
+                    call.transcript.append(
+                        TranscriptTurn(role=event.role, text=event.text)
+                    )
+                elif isinstance(event, Interrupted):
+                    # Log-only no-op, ratified as feature Q4. Deliberately does
+                    # NOT end the call: a barge-in is the caller talking, not a
+                    # failure.
+                    logger.info("caller interrupted the model on %s", call.call_sid)
+                elif isinstance(event, Closed):
+                    await _teardown(call, f"gemini_closed: {event.reason}", websocket)
+                    return
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.exception("event pump failed for %s", call.call_sid)
+            await _teardown(call, f"error: {type(exc).__name__}", websocket)
+
+    async def _drain_outbound(call: "_Call", websocket: WebSocket) -> None:
+        """Write queued frames to the socket in FIFO order.
+
+        `streamSid` rides at the ROOT of every outbound message, captured from the
+        `start` message. Twilio requires it there and discards frames without it,
+        which on a real call is dead air after the greeting -- silent, and on
+        exactly the path the latency acceptance measures. See S3-Q13.
+        """
+        try:
+            while True:
+                payload = await call.sender.queue.get()
+                await websocket.send_json(
+                    {
+                        "event": "media",
+                        "streamSid": call.stream_sid,
+                        "media": {"payload": payload},
+                    }
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("outbound send failed for %s", call.call_sid)
+            await _teardown(call, "twilio_send_failed", websocket)
+
+    async def _teardown(
+        call: "_Call", reason: str, websocket: WebSocket | None = None
+    ) -> None:
+        """Flow: stop sending, flush the bridge, close Gemini, hand off the record.
+
+        At-most-once, guarded by a per-call lock AND a `done` flag: every path that
+        ends a call funnels here, and `BridgeSession.close()` raises
+        `RuntimeError("Input after last input")` by design on a second flush
+        (`voice-intake-demo` Q19). The guard must make that unreachable rather than
+        swallow it.
+
+        Order is drain-stop -> bridge -> gemini -> record (S3-Q8). The bridge flush
+        forwards soxr's stranded tail, so it must run while the Twilio send path can
+        still accept it but after the drain stops taking new work. Gemini closes last
+        because closing it first makes the event loop observe a `Closed` mid-teardown
+        and re-enter here.
+        """
+        async with call.lock:
+            if call.done:
+                return
+            call.done = True
+
+            call.sender.closed = True
+            for task in call.tasks:
+                if task is not asyncio.current_task():
+                    task.cancel()
+            ended_reason = reason
+            try:
+                call.bridge.close()
+            except Exception as exc:
+                logger.exception("bridge close failed for %s", call.call_sid)
+                ended_reason = f"error: {type(exc).__name__}"
+            await call.session.close()
+
+            if websocket is not None:
+                # Close the socket so the handler's blocked `receive_json` returns.
+                # Teardown can be triggered from the drain or pump task while the
+                # main loop still waits for the next inbound message; without this
+                # the call is over but the socket stays open forever -- which is a
+                # hang, not an error, and the worst failure shape available.
+                with suppress(Exception):
+                    await websocket.close()
+
+            record = CallRecord(
+                call_sid=call.call_sid,
+                caller_number=call.caller_number,
+                profile_name=profile.name,
+                started_at=call.started_at,
+                ended_at=clock(),
+                transcript=tuple(call.transcript),
+                timing_path=call.timing_path,
+                ended_reason=ended_reason,
+            )
+            try:
+                await on_call_end(record)
+            except Exception:
+                # Logged and swallowed. Everything above is already settled, so a
+                # raise here cannot leave the call half-torn-down; and retrying
+                # would break the stronger exactly-once guarantee to protect the
+                # weaker one.
+                logger.exception("on_call_end failed for %s", call.call_sid)
 
     return app
