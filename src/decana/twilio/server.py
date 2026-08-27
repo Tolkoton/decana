@@ -18,8 +18,9 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
+from xml.etree.ElementTree import Element, SubElement, tostring
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 
 from decana.gemini.live import LiveEvent
 from decana.profile.model import Profile
@@ -54,6 +55,23 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
+def _render_twiml(profile: Profile, public_wss_url: str, caller: str) -> str:
+    """Render the answer TwiML: speak the disclosure, then open the media stream.
+
+    Built as an element tree rather than an f-string so escaping is correct by
+    construction. A disclosure containing `&` -- ordinary English prose, "Smith &
+    Co" -- produces a document Twilio cannot parse if interpolated raw, while
+    still satisfying a `"<Say>" in body` assertion.
+    """
+    response = Element("Response")
+    say = SubElement(response, "Say")
+    say.text = profile.disclosure
+    connect = SubElement(response, "Connect")
+    stream = SubElement(connect, "Stream", {"url": f"{public_wss_url}/media"})
+    SubElement(stream, "Parameter", {"name": "caller", "value": caller})
+    return tostring(response, encoding="unicode")
+
+
 def create_app(
     profile: Profile,
     live_factory: LiveSessionFactory,
@@ -64,5 +82,16 @@ def create_app(
     clock: Callable[[], datetime] = _utc_now,
     pending_ttl_s: float = 60.0,
 ) -> FastAPI:
-    """Build the app. Slice in progress."""
-    raise NotImplementedError("slice in progress")
+    """Flow: build the app, register the endpoints, hand it back."""
+    app = FastAPI()
+
+    @app.post("/voice")
+    async def voice(request: Request) -> Response:
+        form = await request.form()
+        caller = str(form.get("From", ""))
+        return Response(
+            content=_render_twiml(profile, public_wss_url, caller),
+            media_type="application/xml",
+        )
+
+    return app

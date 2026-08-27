@@ -143,9 +143,23 @@ into Phase 2, not a premise failure.
    `google-genai` drops or repins either, the smoke breaks for a reason unrelated to
    anything this slice did. Same `uv add` prompt, so no extra owner interruption.
 
+4. **`uv add python-multipart` — found during implementation, 2026-08-27, and NOT on
+   the feature's pre-approved list.** Twilio posts the voice webhook as
+   `application/x-www-form-urlencoded`, and Starlette raises
+   `AssertionError: The 'python-multipart' library must be installed to use form
+   parsing` on `await request.form()` without it. Discovered by the first GREEN
+   attempt on `S6.a` failing on exactly that. Added rather than worked around: the
+   alternative is hand-parsing the body with `urllib.parse.parse_qs`, which
+   reimplements form decoding to avoid a dependency FastAPI treats as standard for
+   this. Reversible with one `uv remove`, and the add is visible in the staged diff.
+
 *(Items 2 and 3 came from auditing this enumeration after two consecutive cold reads
-found omissions in it — first `[project.scripts]`, then `fastapi`/`uvicorn`. The list is
-where this artifact was weakest, and it was weak in the same way twice.)*
+found omissions in it — first `[project.scripts]`, then `fastapi`/`uvicorn`. Item 4 came
+from running the code. **The enumeration was audited three times and still missed a
+dependency that the first executed line of the slice demanded** — which is the sharpest
+available statement of this artifact's own recurring lesson: reading finds what you
+thought to look for, running finds what is true. The list is where this artifact was
+weakest, and it was weak in the same way four times.)*
 
 Modules: `src/decana/twilio/records.py` (types), `src/decana/twilio/server.py` (app),
 `src/decana/settings.py` (env), `src/decana/__main__.py` (wiring). Module paths are
