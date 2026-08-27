@@ -141,8 +141,32 @@ term (number/%/latency/error-rate/"reasonable"/"acceptable"/"fast"/...):
 
 After all four phases converge, assemble the full artifact and spawn the
 `slice-planner-critic` ONE more time, fresh context, on the WHOLE artifact with
-NO round history. This catches what the round-anchored critic drifted past
-(handles the bias-toward-agreement risk, overseer principle #4/#12).
+NO round history.
+
+**This is a coverage step, not a finisher.** The round-anchored critic and the
+cold reader fail differently, and the difference is structural rather than a
+matter of care: **rounds anchor on what is already contested.** Each round
+inherits the previous round's findings and works the surface those findings
+opened. That makes rounds excellent at driving a raised objection to ground and
+systematically blind to anything nobody raised in round 1. The cold read has no
+round history, so nothing is already-settled to it — it is the only pass that can
+find an *omission* as opposed to a *flaw*.
+
+**A high round count is therefore evidence FOR running the cold read, not
+against it.** The temptation runs the other way: fifteen rounds feels like
+exhaustive coverage, so the fresh pass feels ceremonial. It is not.
+
+Concrete case — `gemini-live` (S2, 2026-08-27): `Interrupted` is a member of the
+ratified `LiveEvent` union in the feature contract. It had no seam, no behavior
+id, and no mutation check. **Ten round-anchored critic rounds across four phases
+did not raise it once**, because no round had raised it in round 1 and so no
+round inherited it. The cold reader found it on the first pass, from the union
+definition alone. Three other defects in the same slice were found by reading SDK
+source; this one was found by reading the artifact against its own contract with
+no memory of what had been argued.
+
+(Also handles the bias-toward-agreement risk, overseer principle #4/#12 — but
+that is the secondary reason, not the primary one.)
 
 - `CRITIC_PASS` → proceed to write.
 - `CRITIC_REVISE` with a BLOCKING objection → resolve it, then re-run the
@@ -235,7 +259,10 @@ Use `Write` to create `.claude/overseer/slice/$ARGUMENTS.md` with this structure
 - **Convergence is the critic's BLOCKING signal, not friction.** The loop ends
   when the critic returns `CRITIC_PASS`; it never advances on round count alone
   (round 4 is only a circuit-breaker → escalate).
-- **Do NOT skip Phase 1 or its premise HARD GATE.** Do NOT skip the cold-reader.
+- **Do NOT skip Phase 1 or its premise HARD GATE.** Do NOT skip the cold-reader —
+  and specifically, do not skip it *because the round count was high*. See the
+  cold-reader section: rounds cover the contested, the cold read covers the
+  unraised, and a long convergence is evidence for running it rather than against.
 - **Do NOT create ADRs unilaterally** — surface them via CRITIC_ESCALATE
   (ADR_RATIFICATION) and let the owner ratify.
 - **Do NOT let any phase loop past 4 rounds** without escalating (DESIGN_FORK).

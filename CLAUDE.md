@@ -25,11 +25,13 @@ This is enforced by a hook (`block-dangerous.sh`) as defense-in-depth. If you fi
 Do not run these without the human explicitly requesting them in the current turn:
 - `git push`, `git rebase`, `git merge`, `git cherry-pick`, `git revert`
 - `gh pr create`, `gh pr merge`, `gh release`
-- `uv add`, `uv remove`, `poetry add`, `poetry remove`, `pip install`, `pip uninstall`
+- `uv remove`, `poetry add`, `poetry remove`, `pip install`, `pip uninstall`
 - `alembic upgrade/downgrade/revision`, `python manage.py migrate/makemigrations`
 - `docker push`, `docker run`, `docker compose up`
 
 The settings.json `ask` list will prompt for these — that prompt is the human's signal to think before approving. Don't try to bypass it.
+
+**`uv add` is allowed without a prompt** (owner, 2026-08-27). Adding a dependency is a two-way door: one `uv remove` undoes it, and `pyproject.toml` + `uv.lock` put every add in the staged diff the owner reads before committing — so the review moved from the prompt to the commit, it did not disappear. **`uv remove` stays gated**, because removal is not installation and can break a working tree in ways an add cannot. Rationale and accepted risks: `.claude/overseer/audit.md`, 2026-08-27.
 
 ### Operations that are hard-denied
 

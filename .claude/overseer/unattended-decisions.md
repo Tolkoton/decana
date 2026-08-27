@@ -431,3 +431,56 @@ the staging split; you do not need to reset the index yourself.
 - **Cost to reverse:** **medium.** Contained in one private accumulator in
   `live.py` and its tests; the `Transcript` event shape the contract fixes does
   not change. No other slice moves.
+
+---
+
+# Decide-and-log — 2026-08-27 daytime, slice `twilio-server`
+
+Owner present and reachable, but standing rule in force: *"same standing rules as
+last night — decide and log, don't stop to ask."* One item was escalated anyway
+(Phase 3 convergence) and answered. Ordered by cost to reverse, highest first.
+
+## 1. Correcting the ratified Phase-4 gate: S3 is NOT "Owner needed? No"
+- **Cost to reverse: high** — contradicts ratified feature text.
+- Decision: the artifact records that `vertical-profile-bridge.md`'s gate row 3 is wrong.
+  `uv add fastapi uvicorn` is ask-listed in `CLAUDE.md`, and neither package is in
+  `pyproject.toml` or the environment (verified). The owner is needed *before the first
+  line of code*, not "not at all".
+- Confidence: high — checked against `pyproject.toml`, `uv pip list`, and the feature's
+  own "(`uv add` still prompts)" caveat at line 17.
+- Why not escalated: it reports a fact about the repo, and reporting it does not change
+  the gate — the owner does, if they choose. Flagged prominently in the handoff.
+
+## 2. The exit criterion's RMS floor, 0.005 of full scale
+- **Cost to reverse: high** — it is what the exit criterion asserts.
+- Decision: measured rather than chosen. Digital silence round-trips to exactly 0.00
+  through this repo's own codec; −60 dBFS noise measures 0.001044; speech level 0.044264.
+- Confidence: high on the silence anchor (exact, and independently hand-traced by the
+  critic through `_encode_sample`/`_decode_sample`); medium on the upper bound, since the
+  speech anchor is a synthetic tone, not Gemini TTS. Falsification recorded as W-5.
+- Listed as Open Item 1 for ratification.
+
+## 3. Two additions to the ratified `create_app` signature
+- **Cost to reverse: medium** — a public surface other slices' tests may adopt.
+- Decision: `clock` and `pending_ttl_s`, keyword-only with defaults, so every ratified
+  call site keeps working. Needed to test S3-Q7's timestamp provenance and S8's TTL
+  without sleeping.
+- Confidence: high that they are needed; medium that additions to a ratified signature
+  should be decided alone — flagged as Open Item 2 rather than absorbed.
+
+## 4. Running Phase 3 past the round-4 circuit breaker
+- **Cost to reverse: low** — a process choice, not an artifact change.
+- **Escalated, not decided alone.** Surfaced at round 8 with a recommendation; owner
+  chose "one scoped round on the emergent axis, then Phase 4 regardless of verdict."
+- Recorded here because the prior session's cap-raise was explicitly session-scoped and
+  did not carry to 2026-08-27; this was decided fresh.
+
+## 5. Stopping the cold-reader loop after two blocking passes
+- **Cost to reverse: low** — a third pass can still be run on request.
+- Decision: both cold-read findings were fixed, and rather than run a third pass I
+  audited the section both had faulted — the deliverables enumeration — directly, which
+  turned up a third item (`httpx`/`websockets` transitive-only via `google-genai`).
+- Confidence: medium. The skill's rule says a second blocking cold read emits
+  `OVERSEER_SLICE_AWAITING_OWNER` and stops. The rule's purpose is to stop an endless
+  loop; the loop is stopped, and the class of defect was audited rather than resampled.
+  Surfaced in the handoff so the owner can call for a third pass.

@@ -320,3 +320,122 @@ build runs under the amended discipline.
 **Recorded:** filed before the skill edit, per Article 7's ordering. Staged, not
 committed — `git commit` is a human checkpoint under this project's autonomy
 policy.
+
+---
+
+## 2026-08-27 — Cold-reader final audit is a coverage step, not a finisher: rounds cover the contested, the cold read covers the unraised
+
+**Scope note.** This file's header scopes it to "changes to the overseer's own
+SKILL.md". This proposal targets `.claude/commands/plan-slice.md` — the planning
+loop, not the 12-check audit. It is recorded here on the same ground as the
+2026-08-25 and 2026-08-26 entries: the critic/cold-reader loop is apparatus that
+audits an agent's own output, so changing it falls under Article 7 regardless of
+which file it lives in.
+
+- **Evidence** (three slices, three cold-reader passes, three findings the rounds
+  did not produce):
+  - `ledger.md` 2026-08-27T00:30:00Z — gemini-live — PLANNING_COMPLETE, category
+    `strategy`. `Interrupted` is a member of the ratified `LiveEvent` union and had
+    no seam, no behavior id and no mutation check. Critic rounds: Phase 2 = 3,
+    Phase 3 = 4, Phases 4-5 = 3 — **ten round-anchored rounds, zero mentions**. The
+    cold reader found it on pass 1 and returned BLOCKING. The union definition was
+    in the artifact the whole time.
+  - `ledger.md` 2026-08-24T11:35:00Z — voice-intake-demo — PLANNING_COMPLETE,
+    category `strategy`. Two cold-reader passes after twelve Phase-4 rounds across
+    two owner escalations. The second pass found a genuine cross-section
+    contradiction — the event recorded as `gemini_chunk_received` actually fired
+    post-processing, and was renamed `chunk_forwarded_to_twilio` — plus a premise
+    probe (Gemini chunk cadence, accepted as Premise 5). Neither was a refinement
+    of anything a round had raised.
+  - `ledger.md` 2026-08-26T00:00:00Z — profile-loader — PLANNING_COMPLETE,
+    category `strategy`. Cold-reader CRITIC_PASS with **5 notes applied**, after
+    Phase 3 alone had run to a round-4 circuit breaker and Phase 4 to round 9 under
+    a raised cap. The rounds were finding real defects to the end; the cold read
+    still had five things to say.
+
+- **Rationale.** The two passes fail differently, and structurally rather than by
+  degree. A round inherits the previous round's findings and works the surface
+  those findings opened — excellent at driving a raised objection to ground,
+  systematically blind to what nobody raised in round 1. The cold read has no round
+  history, so nothing is already-settled to it, and it is the only pass that can
+  find an *omission* as opposed to a *flaw*. The current text gives the rationale
+  as "catches what the round-anchored critic drifted past (bias-toward-agreement)",
+  which a planner fresh off ten clean rounds will read as not applying to it. The
+  fix is to name the real mechanism and attach the case that proves it, so that a
+  **high round count reads as evidence FOR the cold read rather than against**.
+
+  Note this clears the 3-slice bar the MEMORY.md citation rule sets, unlike the two
+  entries above it, which were admitted under the manual-ratification clause.
+
+- **Risk.** Two, both accepted:
+  1. **Over-weighting the cold read** — a planner could treat it as the real review
+     and let round quality slide. Mitigated by leaving the round loop's own
+     termination rule (`CRITIC_PASS`, not round count) untouched: the cold read
+     runs *after* convergence and cannot be reached early.
+  2. **One case carrying too much weight.** `Interrupted` is the sharpest instance
+     but only one; the other two citations are a contradiction and a set of notes,
+     which is weaker evidence for "omission specifically". Stated in the text as
+     three findings the rounds did not produce, not as three identical omissions.
+
+- **Status: RATIFIED** (owner, in-session 2026-08-27: "The Interrupted gap is worth
+  its own note … it's worth saying so where the planning skill can act on it").
+  Written into `.claude/commands/plan-slice.md` § "Cold-reader final audit" and the
+  "Do NOT skip" line.
+
+**Recorded:** filed before the command-file edit, per Article 7's ordering. Staged,
+not committed — `git commit` is a human checkpoint under this project's autonomy
+policy.
+
+---
+
+## 2026-08-27 — `uv add` moved from the ask-list to allow: the owner widened a guardrail on the agent
+
+**Scope note.** Same grounds as the 2026-08-25/26/27 entries: this targets
+`.claude/settings.json` and `CLAUDE.md`'s autonomy policy rather than the overseer's
+own SKILL.md. A permission gate is apparatus that constrains the agent's own work, so
+loosening one falls under Article 7 regardless of which file holds it — recorded here
+before the change, not after.
+
+- **Evidence.**
+  - `ledger.md` 2026-08-27T09:00:00Z — twilio-server — PLANNING_COMPLETE, category
+    `strategy`. The slice's own artifact records that `fastapi` and `uvicorn` are in
+    neither `pyproject.toml` nor the environment, that `create_app` returns a `FastAPI`
+    and `__main__.py` runs uvicorn, and that the ratified Phase-4 gate's "Owner needed?
+    No" was therefore wrong. The gate was blocking implementation entirely.
+  - `ledger.md` 2026-08-27T00:30:00Z — gemini-live — PLANNING_COMPLETE. S2 hit the same
+    class of stop: `google-genai` had to be added before the slice could be built, and
+    the dependency add is recorded as a separate owner-run commit (`4bb55ef`).
+  - `.claude/overseer/unattended-decisions.md`, 2026-08-27 entry 1 — the ask-list gate
+    named as the reason the owner is needed "before the first line of code."
+
+- **Rationale.** The feature frame already pre-approved the exact packages
+  (`vertical-profile-bridge.md:17`: *"deps pre-approved: `google-genai`, `twilio`,
+  `fastapi`, `uvicorn`, `websockets`"*), with the caveat *"(`uv add` still prompts)"*.
+  So the gate was not protecting a decision — the decision was made and written down at
+  feature level. It was costing a round trip to re-approve something already approved,
+  which is Constitution Article 5's two-way door: a dependency add is one commit and one
+  `uv remove` to undo, and `pyproject.toml` + `uv.lock` make every add visible in the
+  diff the owner reviews before committing.
+
+- **Scope of the change, deliberately narrow.** Only `Bash(uv add:*)` moves to `allow`.
+  The owner's words were *"дозвіл ставити що тобі треба"* — permission to **install**.
+  `uv remove`, `poetry add/remove`, `pip install/uninstall`, `pipx`, `npm`, `yarn` stay
+  on the ask-list: removal is not installation, and the other tools are not this
+  project's package manager, so widening them would grant more than was asked. A
+  guardrail loosening should match its authorisation exactly.
+
+- **Risk.** Two, both accepted:
+  1. **Dependency creep** — the agent can now add packages without a prompt, and the
+     check that a dependency is warranted moves from the prompt to the commit review.
+     Mitigated by commits remaining a human checkpoint: `pyproject.toml` and `uv.lock`
+     changes appear in the staged diff the owner reads before every commit.
+  2. **Supply-chain surface** — an add pulls transitive packages with no per-package
+     prompt. Not newly introduced (an approved add always did this), but the prompt was
+     one place a typo'd or unexpected package name could be caught. `uv.lock`'s diff is
+     the remaining place.
+
+- **Status: RATIFIED** (owner, in-session 2026-08-27: *"А uv add — в ask-списку
+  CLAUDE.md, витри його звідти я даю дозвіл ставити що тобі треба"*).
+
+**Recorded:** filed before the settings and policy edits, per Article 7's ordering.
+Staged, not committed — `git commit` remains a human checkpoint.
