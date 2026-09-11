@@ -1,0 +1,28 @@
+functionsDirectory = "/home/lao/.openclaw/workspace/netlify/functions"
+functionsDirectoryOrigin = "default"
+plugins = []
+headers = []
+redirects = []
+
+[build]
+publish = "/home/lao/.openclaw/workspace"
+publishOrigin = "default"
+functions = "/home/lao/.openclaw/workspace/netlify/functions"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[functions]
+
+[functions."*"]
