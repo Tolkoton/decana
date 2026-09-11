@@ -1,13 +1,15 @@
-functionsDirectory = "/home/lao/.openclaw/workspace/netlify/functions"
-functionsDirectoryOrigin = "default"
 plugins = []
 headers = []
 redirects = []
 
+[functions]
+
+[functions."*"]
+
 [build]
-publish = "/home/lao/.openclaw/workspace"
+publish = "/home/lao/.openclaw/workspace/projects/decana-repo/landings/mortgage brokers"
 publishOrigin = "default"
-functions = "/home/lao/.openclaw/workspace/netlify/functions"
+base = "/home/lao/.openclaw/workspace/projects/decana-repo/landings/mortgage brokers"
 
 [build.environment]
 
@@ -22,7 +24,3 @@ functions = "/home/lao/.openclaw/workspace/netlify/functions"
 [build.processing.js]
 
 [build.services]
-
-[functions]
-
-[functions."*"]

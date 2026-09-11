@@ -7,9 +7,9 @@ redirects = []
 [functions."*"]
 
 [build]
-publish = "/home/lao/.openclaw/workspace/projects/Decana/environmental brokers"
+publish = "/home/lao/.openclaw/workspace/projects/decana-repo/landings/environmental brokers"
 publishOrigin = "config"
-base = "/home/lao/.openclaw/workspace/projects/Decana/environmental brokers"
+base = "/home/lao/.openclaw/workspace/projects/decana-repo/landings/environmental brokers"
 
 [build.environment]
 

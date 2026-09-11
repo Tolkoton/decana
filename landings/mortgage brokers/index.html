@@ -108,16 +108,9 @@
         }
 
         .logo {
-            font-family: var(--font-body);
-            font-weight: 800;
-            font-size: 20px;
-            color: var(--text-primary);
-            text-decoration: none;
-            letter-spacing: 0.15em;
             display: flex;
             align-items: center;
-            gap: 12px;
-            text-transform: uppercase;
+            text-decoration: none;
             transition: all 0.3s var(--ease-out);
         }
 
@@ -126,21 +119,12 @@
             transform: translateY(-1px);
         }
 
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            color: var(--accent-emerald);
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2.2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            transition: color 0.3s ease;
+        .logo-img {
+            height: 52px;
+            width: auto;
+            display: block;
         }
 
-        .logo:hover .logo-icon {
-            color: var(--accent-gold);
-        }
 
 
         .compliance-badge {
@@ -926,20 +910,7 @@
     <header>
         <div class="container header-wrap">
             <a href="#" class="logo" aria-label="Decana Home">
-                <svg class="logo-icon" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Sloped roof -->
-                    <polygon points="10,35 60,10 110,35" stroke-width="2.5"/>
-                    <!-- Building frame -->
-                    <path d="M20,35 L20,70 L100,70 L100,35 Z" stroke-width="2.5"/>
-                    <!-- 4 Arches -->
-                    <path d="M28,70 L28,52 Q34,44 40,52 L40,70" />
-                    <path d="M46,70 L46,52 Q52,44 58,52 L58,70" />
-                    <path d="M64,70 L64,52 Q70,44 76,52 L76,70" />
-                    <path d="M82,70 L82,52 Q88,44 94,52 L94,70" />
-                    <!-- Ground baseline -->
-                    <line x1="10" y1="75" x2="110" y2="75" stroke-width="1.5"/>
-                </svg>
-                <span>Decana</span>
+                <img src="logo.png" alt="Decana Logo" class="logo-img" />
             </a>
             <div class="compliance-badge">UK HOSTED &amp; SECURED</div>
         </div>
