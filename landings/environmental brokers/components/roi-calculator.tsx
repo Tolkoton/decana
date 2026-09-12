@@ -8,16 +8,15 @@ import { Calculator, ArrowRight } from "lucide-react"
 
 export function ROICalculator() {
   const [missedPerMonth, setMissedPerMonth] = useState([4])
-  const [averageMandateValue, setAverageMandateValue] = useState([25000])
+  const [averageEngagementValue, setAverageEngagementValue] = useState([25000])
 
   const CONVERSION_RATE = 0.05 // one in twenty
 
   const missedVal = missedPerMonth[0]
-  const mandateVal = averageMandateValue[0]
+  const engagementVal = averageEngagementValue[0]
 
   const annualMissedEnquiries = missedVal * 12
-  const lostMandates = annualMissedEnquiries * CONVERSION_RATE
-  const lostFeeIncome = lostMandates * mandateVal
+  const lostFeeIncome = annualMissedEnquiries * CONVERSION_RATE * engagementVal
 
   const roundedFeeIncome = Math.round(lostFeeIncome / 1000) * 1000
 
@@ -46,7 +45,7 @@ export function ROICalculator() {
           <CardContent className="space-y-8">
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
               {/* Left Column - Interactive Inputs */}
-              <div className="space-y-8">
+              <div className="space-y-8 flex flex-col justify-center">
                 {/* Missed Enquiries Slider */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -59,7 +58,7 @@ export function ROICalculator() {
                     value={missedPerMonth}
                     onValueChange={setMissedPerMonth}
                     min={1}
-                    max={20}
+                    max={15}
                     step={1}
                     className="w-full"
                   />
@@ -68,19 +67,19 @@ export function ROICalculator() {
                   </p>
                 </div>
 
-                {/* Mandate Value Slider */}
+                {/* Engagement Value Slider */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-foreground">
-                      Your average mandate value
+                      Your average engagement value
                     </label>
                     <span className="text-2xl font-semibold text-primary">
-                      £{mandateVal.toLocaleString("en-GB")}
+                      £{engagementVal.toLocaleString("en-GB")}
                     </span>
                   </div>
                   <Slider
-                    value={averageMandateValue}
-                    onValueChange={setAverageMandateValue}
+                    value={averageEngagementValue}
+                    onValueChange={setAverageEngagementValue}
                     min={5000}
                     max={100000}
                     step={2500}
@@ -91,11 +90,6 @@ export function ROICalculator() {
                     <span>£100,000</span>
                   </div>
                 </div>
-
-                {/* Stated Assumption */}
-                <p className="text-xs text-muted-foreground leading-relaxed pt-4 border-t border-border/40">
-                  Assuming you would win one in {Math.round(1 / CONVERSION_RATE)} of the enquiries you never got to speak to.
-                </p>
               </div>
 
               {/* Right Column - Dynamic Outputs */}
@@ -103,20 +97,25 @@ export function ROICalculator() {
                 {/* Primary Output */}
                 <div className="p-6 bg-primary/10 rounded-lg border border-primary/30 text-center lg:text-left">
                   <div className="text-sm text-muted-foreground mb-1">
-                    Mandates you are losing each year
+                    Potential clients you never speak to each year
                   </div>
                   <div className="text-6xl font-bold text-primary tracking-tight">
-                    {lostMandates.toFixed(1)}
+                    {annualMissedEnquiries}
                   </div>
                 </div>
 
-                {/* Supporting Output */}
-                <div className="p-6 bg-muted/50 rounded-lg border border-border/40 text-center lg:text-left">
-                  <div className="text-sm text-muted-foreground mb-1">
-                    Fee income left on the table
-                  </div>
-                  <div className="text-3xl font-semibold text-foreground">
-                    £{roundedFeeIncome.toLocaleString("en-GB")}
+                {/* Supporting Output with assumption connected directly to the money line */}
+                <div className="p-6 bg-muted/50 rounded-lg border border-border/40 text-center lg:text-left space-y-3">
+                  <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                    Assuming you would win one in {Math.round(1 / CONVERSION_RATE)} of the enquiries you never got to speak to.
+                  </p>
+                  <div className="border-t border-border/40 pt-3">
+                    <div className="text-sm text-muted-foreground mb-1">
+                      Fee income left on the table
+                    </div>
+                    <div className="text-3xl font-semibold text-foreground">
+                      £{roundedFeeIncome.toLocaleString("en-GB")}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -125,7 +124,7 @@ export function ROICalculator() {
             {/* Bottom CTA */}
             <div className="pt-8 border-t border-border/60 text-center">
               <p className="text-muted-foreground mb-6">
-                One recovered mandate covers Decana for years.
+                One recovered engagement covers Decana for years.
               </p>
               <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
                 Arrange a Technical Consultation

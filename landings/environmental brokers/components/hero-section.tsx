@@ -25,7 +25,7 @@ const enquiries = [
     stage: "Stage 5",
     status: "Awaiting Partner Technical Briefing",
     statusColor: "text-amber-500",
-    activity: "Decana instantly flagged as Critical Urgency / High-Value Advisory Mandate. Estimated case value: £45,000.",
+    activity: "Decana instantly flagged as Critical Urgency / High-Value Advisory Engagement. Estimated case value: £45,000.",
   },
   {
     client: "Avenis Consumer Brands SA",
@@ -91,7 +91,7 @@ export function HeroSection() {
             <span className="text-primary">Decana</span> Automates Complex ESG Enquiries.
           </h1>
           <p className="mt-4 text-xl text-muted-foreground/90 font-medium">
-            Capture every instruction. Qualify every mandate. 24/7.
+            Capture every instruction. Qualify every engagement. 24/7.
           </p>
           <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
             Our AI-powered platform fields inbound corporate enquiries, qualifies technical scopes against your
@@ -170,7 +170,7 @@ export function HeroSection() {
                   {/* Scope */}
                   <div className="flex items-start justify-between pt-2 border-t border-border/40">
                     <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Mandate
+                      Engagement
                     </span>
                     <span className="text-sm font-medium text-foreground text-right max-w-[320px]">
                       {currentEnquiry.scope}
