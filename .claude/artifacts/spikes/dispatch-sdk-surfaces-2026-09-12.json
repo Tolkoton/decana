@@ -1,0 +1,53 @@
+{
+  "slice": "dispatch",
+  "date": "2026-09-12",
+  "question": "Do the external surfaces S5's ratified contract names actually exist, in the shapes the contract assumes?",
+  "method": "offline introspection + SDK source read + mypy --strict probe. No network, no credentials.",
+  "versions": {"twilio": "9.11.1", "python": "3.13", "mypy": "strict"},
+  "findings": [
+    {
+      "id": "P1",
+      "claim": "twilio.rest.Client(sid, token).messages.create(to=, from_=, body=) exists and returns MessageInstance",
+      "verdict": "CONFIRMED",
+      "evidence": "inspect.signature: to/from_/body all present; return annotation MessageInstance"
+    },
+    {
+      "id": "P2",
+      "claim": "MessageInstance.sid is str (the feature contract types SmsSender.send -> str)",
+      "verdict": "FALSIFIED",
+      "evidence": "twilio/rest/api/v2010/account/message/__init__.py:119 -> self.sid: Optional[str] = payload.get('sid'). It is Optional[str], set in __init__ from the payload dict, so it is absent from dir(MessageInstance) and can be None at runtime.",
+      "consequence": "The adapter must narrow Optional[str] -> str at the boundary; it cannot simply return msg.sid."
+    },
+    {
+      "id": "P3",
+      "claim": "twilio is importable under this repo's ratified `mypy --strict`",
+      "verdict": "FALSIFIED",
+      "evidence": "mypy --strict on `return Client(a,b).messages.create(...).sid` gives 2 errors: [import-untyped] (no py.typed marker, no stubs) AND [no-any-return]. twilio ships no py.typed; google-genai/fastapi/uvicorn/numpy/httpx/websockets all do.",
+      "consequence": "Needs a scoped [[tool.mypy.overrides]] AND an explicit isinstance narrowing. ignore_missing_imports ALONE does not fix no-any-return -- the value stays Any.",
+      "fix_verified": "override module=['twilio','twilio.*'] + `if not isinstance(sid, str): raise` -> 'Success: no issues found'. Precedent: pyproject.toml:63-68 does exactly this, scoped, for soxr."
+    },
+    {
+      "id": "P4",
+      "claim": "top-level `import twilio` does not collide with the local package src/decana/twilio/",
+      "verdict": "CONFIRMED",
+      "evidence": "find_spec('twilio').origin -> .venv/.../site-packages/twilio/__init__.py; find_spec('decana.twilio').origin -> src/decana/twilio/__init__.py. Distinct; Python 3 has no implicit relative imports."
+    },
+    {
+      "id": "P5",
+      "claim": "Path.open('x') is a create-or-fail primitive, usable as the at-most-once SMS marker",
+      "verdict": "CONFIRMED",
+      "evidence": "second open('x') on the same path raises FileExistsError."
+    },
+    {
+      "id": "P6",
+      "claim": "smtplib offers SMTP_SSL (465) and SMTP+starttls (587) with send_message",
+      "verdict": "CONFIRMED (surfaces only)",
+      "evidence": "hasattr checks pass; SMTP_SSL_PORT=465, SMTP_PORT=25.",
+      "unverified_half": "Whether a REAL SMTP server accepts our message. Needs SMTP_* credentials -> PARKED, not failed."
+    }
+  ],
+  "parked_on_credentials": {
+    "TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN": "the network half of P1 -- that Twilio accepts the call and returns a sid",
+    "SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD/SMTP_FROM": "the network half of P6"
+  }
+}

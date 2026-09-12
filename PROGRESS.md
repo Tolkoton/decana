@@ -1,8 +1,139 @@
 # Build progress
 
-One entry per completed slice, newest first. Planning artifacts live in
-`.claude/overseer/slice/`; this file is the short version — what shipped, what
-surprised us, and what the next slice inherits.
+One `## NOW` block at the top, live. Then one entry per completed slice, newest
+first. Planning artifacts live in `.claude/overseer/slice/`.
+
+**`## NOW` is written for a fresh instance with no memory of the session that
+wrote it.** If you cannot resume from it alone, it is wrong — fix it rather than
+guessing.
+
+---
+
+## NOW — S5 `dispatch` planned; `brief.py` built, 14/54 ids green (updated 2026-09-12)
+
+- **Ids green: 14 of 54** — `D3.a` `D3.b` `D8.a` `D19.a` `D19.b` `D19.c` `D20.a` `D20.b`
+  `D20.c` `D20.d` `D21.a` `D21.b` `D21.c` `D21.d`. **Suite: 277 passed** (was 260).
+- **Built so far:** `src/decana/dispatch/{__init__,errors,model,brief}.py`. `render_brief`
+  is complete against the ratified Q21 template; **10 mutations run, 10 killed**, including
+  the prefix-parsing renderer and the two-line-difference mutant.
+- **Next unblocked item: `senders.py`** — `D9.a` `D9.b` (the `Optional[str]` narrowing),
+  `D11.a` `D11.b` (SMTP transport by port), `D21.e` `D21.f` (sender kwargs), `D17.a`.
+  Then `dispatch.py` (the bulk), then `wiring.py` + `Settings` + `__main__.py`.
+- **`scripts/check_ids.py` now registers `dispatch`** and correctly reports `DIRTY 54 ids,
+  14 covered` with the missing list. Before that row existed it printed `SKIP` and exited 0.
+- **PARKED: none.** Nothing in this slice needs a credential to build — the senders are
+  injected and fake-driven. The smoke's tiers 2/3 park on `SMTP_*` / `TWILIO_*` at Step 5.
+- **Staged, uncommitted:** everything — the S4 port from the reconciliation session AND
+  this session's S5 planning + `brief.py`. The owner has the two suggested commit commands;
+  the hook allows commits only on `unattended/<date>`.
+- **Checks:** `ruff check` clean, `ruff format --check` clean, `uv run mypy --strict src
+  scripts tests` clean (42 files), `pytest` 277 passed.
+
+**Read the slice contract before continuing: `.claude/overseer/slice/dispatch.md`.** It is
+the ratified behavior list; do not invent ids or change what one asserts without escalating.
+
+### Known deviation, recorded rather than hidden
+
+`render_brief` was implemented in full to satisfy its FIRST behavior (`D20.a`), which
+over-shoots TDD's "minimal implementation". The other 13 brief tests therefore passed on
+arrival. That is why the 10 mutation runs above are the evidence, not the green suite —
+the same position `twilio-server` recorded. For the remaining modules, write the test first.
+
+## Superseded — branch fork reconciled (2026-08-27, reconciliation session)
+
+**What happened:** two independent unattended sessions both built S3
+`twilio-server` starting from the same commit (`754394a`), diverging — one
+landed on `main` (`11da8aa`), the other on `slice/s4-analysis` (`28c794e`, with
+S4 `analysis` built on top of it, `8e28dc5`). Neither branch had the other's
+work. `main`'s S3 was chosen as canonical over `slice/s4-analysis`'s, on three
+verified, concrete points — not a coin flip:
+
+1. `slice/s4-analysis`'s `POST /voice` parsed `CallSid`/`From` permissively
+   (`form.get(..., "")`) instead of `main`'s required `Form(alias=...)` fields —
+   the exact empty-string registry-key collision bug `main`'s own fix note
+   describes.
+2. `slice/s4-analysis`'s `_teardown` fired `task.cancel()` without awaiting the
+   cancelled task before closing shared resources — a real race window `main`'s
+   `_stop_task` helper (cancel-and-await) closes.
+3. `slice/s4-analysis` never built `build_on_call_end()` at all — the ratified
+   feature contract names this exact function ("S5 replaces this body with
+   `post_call`"); `main` has it, matching the contract.
+
+This branch (`slice/s5-dispatch`, from `main`) carries forward `main`'s S3 plus
+`slice/s4-analysis`'s S4 (`analysis` — independent of S3's internals, ported
+clean) and its tooling (`check_ids.py`, `mutate_check.py`, `_budget.py`,
+`MEMORY.md`, `ledger.md`, `audit.md`, `unattended-decisions.md`, `AGENTS.md`,
+`CLAUDE.md`, `plan-slice.md`, `slice-builder/SKILL.md` — all pure additions
+`main` never touched). **Not ported:** `slice/s4-analysis`'s `.claude/hooks/`
+changes (it independently rewrote the same commit-policy hook `main` did, in a
+different, less anti-bypass-robust way) and its `.claude/unattended/`-adjacent
+work — left as `main`'s version deliberately; this is a safety-policy choice,
+not a technical one, and wasn't re-litigated here. Flag for the owner if the two
+hook rewrites need reconciling too.
+
+- **S3's 4 "pending ratification" items are still open** — see the S3 entry
+  below. Not blocking S5 (S5 doesn't touch `server.py`), but still owner sign-off
+  before S3 is genuinely DONE.
+- **Suite: 260 passed** (`uv run pytest`), `ruff check` / `ruff format --check`
+  clean, `mypy --strict src scripts tests` clean.
+- **S5 `dispatch` is PLANNED (2026-09-12), not yet built.** Contract:
+  `.claude/overseer/slice/dispatch.md` — 24 decisions, 23 seams, 54 ratified ids, 54
+  mutations, 4-part exit criterion. Converged after 25 round-anchored critic rounds and 9
+  cold reads; 2 owner escalations, both resolved.
+- ~~Next unblocked item: BUILD S5 from that artifact.~~ **DONE / IN PROGRESS — see the
+  live `## NOW` block at the top of this file, which supersedes this line.** The
+  `scripts/check_ids.py` registration it called for has landed.
+- **Two ratified-text amendments landed this session**, both owner-ratified and tagged in
+  `.claude/architecture/feature/vertical-profile-bridge.md`: guarantee (d) now covers all
+  five dispatch effects (not just SMS/email), and guarantee (b)'s SMS-marker question is
+  marked RESOLVED. A third change is the plan's own (Q24, no owner gate needed): S5 MOVES
+  `build_on_call_end` out of `twilio/server.py` into `dispatch/wiring.py`, because leaving it
+  there would make S3 import S4/S5 — which Edge S3 forbids. `__main__.py`'s call site changes
+  from `build_on_call_end()` to `build_on_call_end(settings, profile)`.
+- **`twilio` was added as a dependency** (`uv add twilio` -> 9.11.1). It ships no `py.typed`,
+  so the build must add a scoped `[[tool.mypy.overrides]]` AND narrow `Optional[str]` at the
+  adapter — `ignore_missing_imports` alone leaves `no-any-return`.
+- **S7 WILL DESTROY ITS OWN EVIDENCE unless sequenced.** Step 7b redeploys the same
+  `max-instances=1` service twice, wiping the instance disk where S5's artifacts live, while
+  Edge S7 requires reading `{call_sid}.transcript.txt` and `.brief.md` per call. The
+  sequencing requirement is now written into row 7b and Edge S7 themselves.
+- **PARKED on `GEMINI_API_KEY`:** `scripts/smoke_twilio_server.py`,
+  `scripts/smoke_analysis.py`. `.env` is hard-denied to the agent, so the variable must be
+  exported by whatever invokes them (the owner, via `!`).
+- **`scripts/supervise.sh` IS NOT ON THIS BRANCH** (found 2026-09-12). `CLAUDE.md:163` and
+  an earlier version of this line both name it as the layer that exports secrets, but it was
+  never ported in the reconciliation — it exists only on `slice/s4-analysis` (`a80c16f`), and
+  that version checks `GEMINI_API_KEY` only: it exports nothing and inherits whatever the
+  invoking shell has. **Owner decision needed:** port it, or correct `CLAUDE.md`. Until one
+  of those happens, the project's written parking story points at a file that is not here.
+
+### How to check any slice's exit criterion
+
+Run `scripts/check_ids.py`. Diffs the ratified id set against test docstrings in
+both directions. Do not eyeball this.
+
+**It covers only the slices REGISTERED in its `SLICES` dict** — today `twilio-server`
+and `analysis`. `profile-loader` and `gemini-live` are NOT registered, so their id sets
+are not mechanically checked by it despite the line above previously claiming "every
+slice" (corrected 2026-09-12). A new slice must add its own row, or it is silently
+uncovered.
+
+**A green exit code is not the check.** An unregistered slice — or one whose test file
+is missing — takes the `SKIP` branch, which `continue`s WITHOUT setting `dirty`, so the
+script prints `SKIP` and still exits 0. Read the printed line per slice; `OK` with a
+non-zero id count is the evidence, not `$?`.
+
+### Work queue
+
+| node | state | note |
+|---|---|---|
+| S1 profile | DONE | |
+| S2 gemini-live | DONE | |
+| S3 twilio-server | DONE, 4 items pending owner ratification | see entry below |
+| S4 analysis | DONE | ported from `slice/s4-analysis`, unchanged |
+| **S5 dispatch** | **PLANNED, next to BUILD** | artifact: `.claude/overseer/slice/dispatch.md`; fake-driven, no credentials needed |
+| S6 deploy | HUMAN-REQUIRED | Cloud Run + cloud credentials |
+| S7 real calls | HUMAN-REQUIRED | provisioned number + a human with a phone |
 
 ## Slice S3 — twilio-server (DONE 2026-08-27, pending 4 ratifications)
 
@@ -164,6 +295,46 @@ expected shape of S3-Q3, not a defect.
   as strings, whether `sequenceNumber` is contiguous, whether `mark` is echoed —
   none is checkable without a real call, and there is no SDK source to read.
   Falsified or confirmed by the tracer.
+
+## Slice S4 — analysis (DONE 2026-08-27)
+
+Feature `vertical-profile-bridge`, slice S4. Contract:
+`.claude/overseer/slice/analysis.md`. Planned and built unattended.
+
+- **Modules:** `src/decana/analysis/{model,analyse,gemini_client}.py`.
+- **Tests:** `tests/test_analysis.py`, 25 nodes covering all 22 ratified ids, clean in
+  both directions (`scripts/check_ids.py`). Suite 235 -> 260.
+- **Mutation evidence: 7 of 7 killed**, each via `scripts/mutate_check.py`.
+- **Smoke:** `scripts/smoke_analysis.py` — PARKED on `GEMINI_API_KEY`.
+
+### Surprises
+
+- **Eight defects in planning, every one the same shape** — a ratified thing with fewer
+  than all three of (a decision naming the mechanism, a seam naming the wrong
+  implementation, an id naming the node). None was found by re-reading; every one came
+  from an enumeration walked row by row.
+- **`except BaseException` is one word from correct and silent forever.** It passes
+  every node except `A4.f`, `ruff` and `mypy`, and costs teardown the ability to cancel
+  the analysis at all.
+- **A dropped `api_key` is masked by the SDK itself.** `google-genai` falls back to
+  `os.environ['GEMINI_API_KEY']`, which is exactly what the deploy injects — so
+  `genai.Client()` passes CI, the smoke AND production. The usual reassurance that a
+  real call would catch it is false here.
+- **The sync and async facades are interchangeable to mypy and not to the event loop.**
+  `client.models.generate_content` is a blocking `def`; wrapping it in an `async def`
+  defeats `wait_for` and stalls audio for every other live call.
+- **A repair can introduce the defect it is repairing.** The `summary`-content fix was
+  applied to four of Seam 4's five failure modes and skipped the fifth.
+
+### Open for the next slice
+
+- **S5 consumes `Analysis` and `CallRecord`**, both tested. It needs no credentials to
+  build; SMTP and Twilio senders are injected.
+- **`raw` is what S5 writes** to `{call_sid}.analysis.json`, and it is populated on the
+  failure paths too — deliberately, because a parse failure is when someone needs to
+  see what the model actually said.
+- **W-1:** truncation can end a summary mid-sentence. Accepted — the brief points at
+  the transcript rather than replacing it.
 
 ## Slice S2 — gemini-live (DONE 2026-08-27)
 

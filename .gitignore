@@ -21,3 +21,8 @@ venv/
 .claude/overseer/state
 
 .foe-*
+
+# Per-machine runtime state: conflicts across machines, and the budget
+# file additionally carries a log of when paid API calls were made.
+.claude/overseer/.api-budget.json
+.claude/overseer/.last_audit_sha
