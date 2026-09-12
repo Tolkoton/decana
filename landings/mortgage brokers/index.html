@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decana | 24/7 Compliant Intake &amp; Status Triage for UK Mortgage Brokers</title>
+    
+    <!-- Premium Google Fonts pairing: Editorial Serif (Fraunces) + Sleek Modern Sans (Plus Jakarta Sans) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS RESET & VARIABLES */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            /* Palette: Deep Sovereign Navy, Cream, Emerald & Hormozi Gold */
+            --bg-dark: #070c1e;
+            --bg-card: #0f1833;
+            --border-color: #1e2e60;
+            --text-primary: #f4f6fc;
+            --text-secondary: #94a3b8;
+            --accent-emerald: #10b981;
+            --accent-emerald-hover: #059669;
+            --accent-gold: #fbbf24;
+            --focus-ring: #3b82f6;
+            
+            /* Typography */
+            --font-display: 'Fraunces', Georgia, serif;
+            --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            /* Shadows & Border Radii */
+            --shadow-layered: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius-outer: 16px;
+            --radius-inner: 12px;
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        html {
+            scroll-behavior: smooth;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ACCESSIBILITY & UTILITIES */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        :focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 4px;
+        }
+
+        /* NOISE GRAIN ATMOSPHERE */
+        .grain-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            content: "";
+            opacity: 0.02;
+            pointer-events: none;
+            z-index: 9999;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* CONTAINER */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* HEADER & NAVIGATION */
+        header {
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: rgba(7, 12, 30, 0.8);
+        }
+
+        .header-wrap {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 80px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.3s var(--ease-out);
+        }
+
+        .logo:hover {
+            opacity: 0.85;
+            transform: translateY(-1px);
+        }
+
+        .logo-img {
+            height: 52px;
+            width: auto;
+            display: block;
+        }
+
+
+
+        .compliance-badge {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-emerald);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 4px 10px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* HERO SECTION */
+        .hero {
+            padding: 100px 0 80px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: -200px;
+            right: -100px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: clamp(38px, 5vw, 60px);
+            line-height: 1.1;
+            letter-spacing: -1px;
+            margin-bottom: 24px;
+        }
+
+        .hero-text h1 span {
+            color: var(--accent-emerald);
+            font-style: italic;
+        }
+
+        .hero-text p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            max-width: 600px;
+        }
+
+        .hero-badge-container {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .hero-trust-stamp {
+            background-color: var(--bg-card);
+            border: 1px dashed var(--border-color);
+            padding: 16px;
+            border-radius: var(--radius-inner);
+            font-size: 14px;
+            color: var(--text-primary);
+            max-width: 580px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .hero-trust-stamp .quote-icon {
+            color: var(--accent-gold);
+            font-size: 24px;
+            font-family: var(--font-display);
+            line-height: 1;
+        }
+
+        .hero-cta-group {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 28px;
+            border-radius: var(--radius-inner);
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s var(--ease-out);
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-emerald);
+            color: var(--bg-dark);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-emerald-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* PAIN GRID SECTION */
+        .pain-section {
+            padding: 100px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .section-label {
+            font-family: var(--font-mono);
+            color: var(--accent-gold);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: clamp(28px, 4vw, 42px);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        .pain-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .pain-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 32px;
+            border-radius: var(--radius-outer);
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s var(--ease-out);
+        }
+
+        .pain-card:hover {
+            border-color: rgba(251, 191, 36, 0.4);
+        }
+
+        .pain-card .metric {
+            font-family: var(--font-mono);
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .pain-card h3 {
+            font-family: var(--font-display);
+            font-size: 22px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .pain-card p {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* THE COMPLIANCE FIREBREAK */
+        .compliance-section {
+            padding: 100px 0;
+            background: linear-gradient(180deg, var(--bg-dark) 0%, rgba(16, 185, 129, 0.03) 50%, var(--bg-dark) 100%);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .compliance-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: center;
+        }
+
+        .compliance-left h2 {
+            font-family: var(--font-display);
+            font-size: 38px;
+            margin-bottom: 24px;
+            line-height: 1.2;
+        }
+
+        .compliance-left p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .compliance-pill-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .compliance-item {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .compliance-item-icon {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--accent-emerald);
+            padding: 6px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .compliance-item-text h4 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .compliance-item-text p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* REALISTIC LIVE MOCK INTERACTIVE FORM INTAKE */
+        .form-simulator {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-outer);
+            padding: 32px;
+            box-shadow: var(--shadow-layered);
+            position: relative;
+        }
+
+        .form-simulator::after {
+            content: "SECURE UK DATA VAULT";
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .simulator-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .simulator-header h3 {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .simulator-step {
+            display: none;
+        }
+
+        .simulator-step.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .simulator-step label {
+            display: block;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .simulator-step h4 {
+            font-family: var(--font-display);
+            font-size: 20px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            background-color: rgba(7, 12, 30, 0.6);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: var(--radius-inner);
+            font-size: 16px;
+            font-family: var(--font-body);
+            transition: border-color 0.2s var(--ease-out);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-emerald);
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .radio-option {
+            background-color: rgba(7, 12, 30, 0.4);
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border-radius: var(--radius-inner);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+            transition: all 0.2s var(--ease-out);
+        }
+
+        .radio-option:hover {
+            border-color: var(--accent-emerald);
+            background-color: rgba(16, 185, 129, 0.02);
+        }
+
+        .radio-option input {
+            accent-color: var(--accent-emerald);
+            width: 18px;
+            height: 18px;
+        }
+
+        .simulator-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+        }
+
+        .step-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--border-color);
+            border-radius: 50%;
+        }
+
+        .dot.active {
+            background-color: var(--accent-emerald);
+        }
+
+        /* VALUE STACK SECTION */
+        .offer-section {
+            padding: 100px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .offer-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 64px;
+            align-items: start;
+        }
+
+        .stack-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .stack-item {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-inner);
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.2s var(--ease-out);
+        }
+
+        .stack-item:hover {
+            transform: translateX(4px);
+        }
+
+        .stack-item-desc h4 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stack-item-desc p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .stack-item-price {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            text-align: right;
+        }
+
+        .stack-item-price span {
+            display: block;
+            text-decoration: line-through;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .stack-item-price strong {
+            color: var(--accent-gold);
+        }
+
+        .price-card {
+            background-color: #121c3d;
+            border: 2px solid var(--accent-gold);
+            border-radius: var(--radius-outer);
+            padding: 40px;
+            box-shadow: var(--shadow-layered);
+            position: sticky;
+            top: 120px;
+        }
+
+        .price-card h3 {
+            font-family: var(--font-display);
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .price-card-p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .price-num {
+            font-family: var(--font-display);
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+
+        .price-num span {
+            font-size: 16px;
+            font-family: var(--font-body);
+            color: var(--text-secondary);
+            font-weight: normal;
+        }
+
+        .price-features {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 24px 0 32px 0;
+            border-top: 1px solid var(--border-color);
+            padding-top: 24px;
+        }
+
+        .price-feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .price-feature-item::before {
+            content: "✓";
+            color: var(--accent-emerald);
+            font-weight: bold;
+        }
+
+        /* INTERACTIVE ROI CALCULATOR WITH REALISTIC FUNNEL MATH */
+        .calculator-section {
+            padding: 100px 0;
+            background-color: rgba(7, 12, 30, 0.5);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .calculator-wrap {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-outer);
+            padding: 48px;
+            max-width: 900px;
+            margin: 0 auto;
+            box-shadow: var(--shadow-layered);
+        }
+
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 48px;
+            margin-top: 32px;
+        }
+
+        .calc-left {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .calc-left label {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .range-slider-container {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .range-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 99px;
+            background: var(--border-color);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .range-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .calc-right {
+            background-color: rgba(7, 12, 30, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-inner);
+            padding: 32px;
+            text-align: center;
+        }
+
+        .calc-stat {
+            margin-bottom: 24px;
+        }
+
+        .calc-stat:last-child {
+            margin-bottom: 0;
+        }
+
+        .calc-stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .calc-stat-num {
+            font-family: var(--font-mono);
+            font-size: 38px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .calc-stat-num.highlight {
+            color: var(--accent-emerald);
+        }
+
+        /* GUARANTEE BOX */
+        .guarantee-section {
+            padding: 80px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .guarantee-box {
+            background: linear-gradient(135deg, #101c3d 0%, #0c152d 100%);
+            border: 2px solid var(--accent-gold);
+            border-radius: var(--radius-outer);
+            padding: 48px;
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .guarantee-box h2 {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--accent-gold);
+        }
+
+        .guarantee-box p {
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            max-width: 750px;
+            margin: 0 auto 32px auto;
+        }
+
+        .guarantee-box .subtext {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            letter-spacing: 0.05em;
+        }
+
+        /* FAQ ACCORDION */
+        .faq-section {
+            padding: 100px 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .faq-list {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .faq-item {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-inner);
+            overflow: hidden;
+        }
+
+        .faq-trigger {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 600;
+            text-align: left;
+            padding: 24px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-trigger::after {
+            content: "+";
+            font-family: var(--font-mono);
+            font-size: 20px;
+            color: var(--accent-emerald);
+            transition: transform 0.2s var(--ease-out);
+        }
+
+        .faq-item.open .faq-trigger::after {
+            transform: rotate(45deg);
+        }
+
+        .faq-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s var(--ease-out);
+        }
+
+        .faq-item.open .faq-content {
+            max-height: 300px;
+        }
+
+        .faq-content-inner {
+            padding: 0 24px 24px 24px;
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* FOOTER */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 60px 0;
+            background-color: #040815;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        footer p {
+            margin-bottom: 16px;
+        }
+
+        /* KEYFRAME ANIMATIONS */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* RESPONSIVE LAYOUT adjustments */
+        @media (max-width: 992px) {
+            .hero-grid, .compliance-split, .offer-grid, .calculator-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+            .price-card {
+                position: static;
+                margin-top: 40px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .hero-cta-group {
+                flex-direction: column;
+            }
+            .hero-badge-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grain-overlay" aria-hidden="true"></div>
+
+    <!-- HEADER / HERO -->
+    <header>
+        <div class="container header-wrap">
+            <a href="#" class="logo" aria-label="Decana Home">
+                <img src="logo.png" alt="Decana Logo" class="logo-img" />
+            </a>
+            <div class="compliance-badge">UK HOSTED &amp; SECURED</div>
+        </div>
+    </header>
+
+    <main>
+        <!-- HERO -->
+        <section class="hero" id="home">
+            <div class="container hero-grid">
+                <div class="hero-text">
+                    <div class="hero-badge-container">
+                        <div class="compliance-badge">MCOB &amp; CONSUMER DUTY READY</div>
+                    </div>
+                    <h1>Never Miss Another <span>£1,000+ Mortgage Commission</span>. Even When Sleeping.</h1>
+                    <p>Meet Decana — a secure, compliant voice receptionist built specifically for mortgage brokers. Intercept lost weekend leads, deflect time-consuming status calls, and secure appointments on autopilot.</p>
+                    
+                    <div class="hero-trust-stamp">
+                        <span class="quote-icon" aria-hidden="true">“</span>
+                        <p><strong>83% of clients do not trust AI to evaluate their needs.</strong> That is why Decana is designed to operate strictly outside regulated advice boundaries. Clear regulatory protection. Compliant booking structure.</p>
+                    </div>
+
+                    <div class="hero-cta-group">
+                        <a href="#demo" class="btn btn-primary">Try Simulated Intake</a>
+                        <a href="#roi" class="btn btn-secondary">Calculate Your ROI</a>
+                    </div>
+                </div>
+                
+                <!-- PRE-CALCULATED CARD PREVIEW -->
+                <div class="price-card" style="margin-top:0;">
+                    <h3>The Instant Response Edge</h3>
+                    <p class="price-card-p">Failing to answer within 5 minutes drops lead qualification odds by 21x. Here is what Decana does for you:</p>
+                    
+                    <div class="price-features" style="border:none; padding:0; margin:0 0 24px 0;">
+                        <div class="price-feature-item">Qualifies and registers leads 24/7</div>
+                        <div class="price-feature-item">Books directly into your Calendly slot</div>
+                        <div class="price-feature-item">Triages status calls without touching client data</div>
+                        <div class="price-feature-item">Audit-ready, MCOB 2-day record logs</div>
+                    </div>
+
+                    <a href="#pricing" class="btn btn-primary" style="width: 100%;">View the Grand Slam Bundle</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- THE PAINS -->
+        <section class="pain-section" id="pains">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">THE REAL COST OF DELAY</span>
+                    <h2 class="section-title">The 5 Structural Leaks Starving UK Mortgage Brokers</h2>
+                </div>
+                
+                <div class="pain-grid">
+                    <div class="pain-card">
+                        <span class="metric">20–30%</span>
+                        <h3>The Missed Call Leak</h3>
+                        <p>Typical mortgage brokers miss 20% to 30% of their incoming calls. Since 85% of clients who hit a voicemail never leave a message, and 67% call a competitor within 30 minutes, this leak directly starves your pipeline.</p>
+                    </div>
+
+                    <div class="pain-card">
+                        <span class="metric">60%</span>
+                        <h3>The After-Hours Black Hole</h3>
+                        <p>Over 60% of prospective clients call during evenings or weekends when you're off-duty. Since they are shopping around, the first broker to respond and secure the booking wins the business.</p>
+                    </div>
+
+                    <div class="pain-card">
+                        <span class="metric">62% Overwork</span>
+                        <h3>The 45-Hour Burnout</h3>
+                        <p>62% of mortgage professionals work over 45 hours a week, with 21% reporting high anxiety. Decana gives you your evenings and weekends back. Turn off your phone at 6:00 PM without the anxiety of missing a £1,000+ commission call.</p>
+                    </div>
+
+                    <div class="pain-card">
+                        <span class="metric">Zero Revenue</span>
+                        <h3>Status Call Distraction</h3>
+                        <p>Anxious clients, solicitors, and surveyors calling to ask "where is my application?" do not generate revenue, yet they constantly interrupt your high-value advice work and split your attention.</p>
+                    </div>
+
+                    <div class="pain-card" style="grid-column: span 1; @media (min-width: 992px) { grid-column: span 2; }">
+                        <span class="metric">Consumer Duty</span>
+                        <h3>MCOB &amp; Consumer Duty Compliance</h3>
+                        <p>MCOB rules require supplying complete call records within 2 days, while Consumer Duty demands proof of "good client outcomes" and proactive identification of vulnerable customers. Meeting this audit burden manually is impossible unless your calls are automatically transcribed and screened for vulnerability markers.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- THE COMPLIANCE FIREBREAK & INTERACTIVE DEMO -->
+        <section class="compliance-section" id="demo">
+            <div class="container compliance-split">
+                <div class="compliance-left">
+                    <span class="section-label">COMPLIANT BY DESIGN</span>
+                    <h2>A Pure Receptionist. Never an Advisor.</h2>
+                    <p>Decana respects regulatory boundaries. Our voice concierge is hard-coded to ignore advice prompts, meaning it will never mention rates, recommend products, or make financial decisions—strictly safeguarding your advisory license.</p>
+                    
+                    <div class="compliance-pill-list">
+                        <div class="compliance-item">
+                            <span class="compliance-item-icon">01</span>
+                            <div class="compliance-item-text">
+                                <h4>Supports MCOB &amp; Consumer Duty Alignment</h4>
+                                <p>Answers calls, captures the factual brief, and secures the calendar appointment. Designed strictly to operate outside regulated advice boundaries.</p>
+                            </div>
+                        </div>
+                        <div class="compliance-item">
+                            <span class="compliance-item-icon">02</span>
+                            <div class="compliance-item-text">
+                                <h4>UK Sovereign Hosting</h4>
+                                <p>All telephone recordings, client details, and case files are stored strictly on highly secure servers inside the UK (GDPR sovereign storage).</p>
+                            </div>
+                        </div>
+                        <div class="compliance-item">
+                            <span class="compliance-item-icon">03</span>
+                            <div class="compliance-item-text">
+                                <h4>Consumer Duty Vulnerability Screening</h4>
+                                <p>Every single call is transcribed, structured, and screened for vulnerable client indicators, ensuring you meet strict Consumer Duty audit guidelines.</p>
+                            </div>
+                        </div>
+                        <div class="compliance-item">
+                            <span class="compliance-item-icon">04</span>
+                            <div class="compliance-item-text">
+                                <h4>Urgent Professional Escalation</h4>
+                                <p>Calls from lenders, underwriters, or conveyancing solicitors are recognized instantly and escalated via urgent SMS alert to meet critical response windows.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- INTERACTIVE SIMULATOR FOR CONVERTING LEADS -->
+                <div class="form-simulator">
+                    <div class="simulator-header">
+                        <h3>Simulated Compliant Intake</h3>
+                        <p style="font-size: 13px; color: var(--text-secondary);">Test our secure, GDPR-compliant intake process below:</p>
+                    </div>
+                    
+                    <form id="intake-form" onsubmit="event.preventDefault();">
+                        <!-- STEP 1 -->
+                        <div class="simulator-step active" id="step-1">
+                            <label>DECANA CONCIERGE (AI INTRO DISCLOSURE)</label>
+                            <h4 style="font-style: italic; color: var(--accent-gold); font-size: 15px; margin-bottom: 12px;">"Hi, you are speaking with Decana's digital assistant. To help direct your call, how may I assist you today?"</h4>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="intent" value="new_mortgage" checked>
+                                    <span>New purchase or remortgage consultation</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="intent" value="case_update">
+                                    <span>Update on an active application</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="intent" value="professional">
+                                    <span>Lender, Solicitor, Valuer (Requires Urgent Escalation)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- STEP 2 -->
+                        <div class="simulator-step" id="step-2">
+                            <label>STEP 2 OF 3: PRE-QUALIFICATION BRIEF</label>
+                            <h4>What is the status of your property search and credit history?</h4>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="qualification" value="found_clear" checked>
+                                    <span>Property found, clear credit history</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="qualification" value="nofound_clear">
+                                    <span>No property yet, clear credit history</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="qualification" value="found_adverse">
+                                    <span>Property found, complex/adverse credit history</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="qualification" value="self_employed">
+                                    <span>Self-Employed Client (Specialist Case marker)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- STEP 3 -->
+                        <div class="simulator-step" id="step-3">
+                            <label>STEP 3 OF 3: CALENDAR SECURING</label>
+                            <h4>Enter your details to secure your priority booking:</h4>
+                            <div style="margin-bottom: 16px;">
+                                <input type="text" id="client-name" class="form-control" placeholder="Your Full Name..." required>
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <input type="email" id="client-email" class="form-control" placeholder="Your Email..." required>
+                            </div>
+                            <div style="margin-bottom: 16px;">
+                                <input type="tel" id="client-phone" class="form-control" placeholder="Your Phone Number..." required>
+                            </div>
+                        </div>
+
+                        <!-- STEP 4: CONFIRMATION -->
+                        <div class="simulator-step" id="step-4">
+                            <div style="text-align: center; padding: 10px 0;">
+                                <div style="font-size: 48px; margin-bottom: 12px; color: #10B981;">✓</div>
+                                <h4 style="margin-bottom: 10px; font-weight: 700; color: var(--text-primary);">Booking confirmed.</h4>
+                                <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px;">
+                                    We've sent your appointment details and a short pre-screening form. Completing it before your consultation saves you both time — your adviser arrives already knowing your situation.
+                                </p>
+                                <button type="button" class="btn btn-secondary" id="restart-demo-btn" style="padding: 8px 16px; font-size: 13px; display: inline-block;">Test Again</button>
+                            </div>
+                        </div>
+
+                        <div class="simulator-nav">
+                            <div class="step-dots">
+                                <span class="dot active"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </div>
+                            <button type="button" class="btn btn-primary" id="next-btn" style="padding: 10px 20px; font-size: 14px;">Next Step →</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROI CALCULATOR WITH INTELLECTUALLY HONEST FUNNEL MATH -->
+        <section class="calculator-section" id="roi">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">HONEST FUNNEL CONVERSIONS</span>
+                    <h2 class="section-title">The Secure Booking Math</h2>
+                </div>
+
+                <div class="calculator-wrap">
+                    <div class="calculator-grid">
+                        <div class="calc-left">
+                            <label for="cases-slider">Qualified Booked Consultations / mo:</label>
+                            <div class="range-slider-container">
+                                <input type="range" id="cases-slider" class="range-slider" min="2" max="20" value="4">
+                                <div class="slider-labels" style="margin-top: 12px;">
+                                    <span>2 Bookings</span>
+                                    <span>10 Bookings</span>
+                                    <span>20 Bookings</span>
+                                </div>
+                            </div>
+                            <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+                                We apply a realistic **30% conversion rate** from a pre-qualified booked phone consultation to a fully completed mortgage case, assuming an average broker commission of **£1,000 per case**.
+                            </p>
+                        </div>
+
+                        <div class="calc-right">
+                            <div class="calc-stat">
+                                <span class="calc-stat-label">Booked Consultations</span>
+                                <span class="calc-stat-num" id="calc-booked">4</span>
+                            </div>
+                            <div class="calc-stat">
+                                <span class="calc-stat-label">Estimated Completed Cases (30% Conversion)</span>
+                                <span class="calc-stat-num" id="calc-completed">1.2</span>
+                            </div>
+                            <div class="calc-stat">
+                                <span class="calc-stat-label">Additional Est. Commissions (£1,000 / case)</span>
+                                <span class="calc-stat-num" id="calc-revenue">£1,200</span>
+                            </div>
+                            <div class="calc-stat" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+                                <span class="calc-stat-label">Net Monthly Profit (after £299 sub)</span>
+                                <span class="calc-stat-num highlight" id="calc-profit">+£901</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- THE GRAND SLAM OFFER STACK -->
+        <section class="offer-section" id="pricing">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">UNBEATABLE VALUE</span>
+                    <h2 class="section-title">The Decana "No-Missed-Commission" Stack</h2>
+                </div>
+
+                <div class="offer-grid">
+                    <div class="stack-list">
+                        <div class="stack-item">
+                            <div class="stack-item-desc">
+                                <h4>24/7 Voice Concierge &amp; Booker</h4>
+                                <p>Answers calls instantly, pre-qualifies incoming prospects, and schedules them directly in your calendar.</p>
+                            </div>
+                            <div class="stack-item-price">
+                                <span>£1,200/yr</span>
+                                <strong>Included</strong>
+                            </div>
+                        </div>
+
+                        <div class="stack-item">
+                            <div class="stack-item-desc">
+                                <h4>2026 Refinance Inbound Protection Safety Net</h4>
+                                <p>Captures "Should I renew?" inquiries from clients receiving bank renewal letters, securing them before they accept direct bank offers.</p>
+                            </div>
+                            <div class="stack-item-price">
+                                <span>£800/yr</span>
+                                <strong>Included</strong>
+                            </div>
+                        </div>
+
+                        <div class="stack-item">
+                            <div class="stack-item-desc">
+                                <h4>GDPR Sovereign Storage Vault</h4>
+                                <p>Private, highly secure client database hosted entirely in the UK (No US-server metadata leaks).</p>
+                            </div>
+                            <div class="stack-item-price">
+                                <span>£500/yr</span>
+                                <strong>Included</strong>
+                            </div>
+                        </div>
+
+                        <div class="stack-item">
+                            <div class="stack-item-desc">
+                                <h4>Automated Pre-Screening &amp; Case Briefing</h4>
+                                <p>Immediately after booking, the client receives a short, secure questionnaire hosted in the UK. Before the consultation even starts, you get a structured brief: case type, employment, property, and complexity markers. You walk into the meeting fully prepared, instead of wasting the first twenty minutes gathering basic facts.</p>
+                            </div>
+                            <div class="stack-item-price">
+                                <span>£400/yr</span>
+                                <strong>Included</strong>
+                            </div>
+                        </div>
+
+                        <div class="stack-item">
+                            <div class="stack-item-desc">
+                                <h4>Consumer Duty Logging &amp; Vulnerability Audit</h4>
+                                <p>Automated transcripts, compliance record delivery within 2 days, and flags for vulnerable clients.</p>
+                            </div>
+                            <div class="stack-item-price">
+                                <span>£600/yr</span>
+                                <strong>Included</strong>
+                            </div>
+                        </div>
+
+                        <div class="stack-item" style="border-color: rgba(251, 191, 36, 0.4);">
+                            <div class="stack-item-desc">
+                                <h4>🎁 BONUS 1: Secure Status Triage Module</h4>
+                                <p>Decana does not read or disclose your case status — zero integration with lender systems is required. The agent instantly recognizes a status call, logs the inquiry, and sends you a structured notification. The client knows they’ve been heard immediately, and you can reply in one message whenever it suits you.</p>
+                            </div>
+                            <div class="stack-item-price">
+                                <span>£499</span>
+                                <strong style="color: var(--accent-gold);">Free</strong>
+                            </div>
+                        </div>
+
+                        <div class="stack-item" style="border-color: rgba(251, 191, 36, 0.4);">
+                            <div class="stack-item-desc">
+                                <h4>🎁 BONUS 2: Out-Of-The-Box CRM Integration</h4>
+                                <p>Direct pipeline linking with Calendly, HubSpot, Salesforce, or custom broker portals.</p>
+                            </div>
+                            <div class="stack-item-price">
+                                <span>£350</span>
+                                <strong style="color: var(--accent-gold);">Free</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FINAL CONVERSION PRICE CARD -->
+                    <div class="price-card">
+                        <h3>Secure Your Protection Vault</h3>
+                        <p class="price-card-p">Secure just one completed mortgage case every few months to yield massive returns.</p>
+                        
+                        <div class="price-num">£299<span>/ month</span></div>
+                        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 24px;">Or get two months free and pay £2,400 annually.</p>
+
+                        <div class="price-features">
+                            <div class="price-feature-item">No long-term commitments (cancel anytime)</div>
+                            <div class="price-feature-item">MCOB &amp; Consumer Duty audit record logs</div>
+                            <div class="price-feature-item">Setup completed by our engineers within 48 hours</div>
+                            <div class="price-feature-item">Full UK-hosted sovereign security layout</div>
+                        </div>
+
+                        <button onclick="alert('Demo Mode: Integration complete!')" class="btn btn-primary" style="width: 100%;">Get Started Risk-Free</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- THE RISK REVERSAL -->
+        <section class="guarantee-section">
+            <div class="container">
+                <div class="guarantee-box">
+                    <h2>The Single Qualified Booking Guarantee</h2>
+                    <p>“If Decana does not successfully capture, pre-qualify, and book at least ONE qualified mortgage consultation into your calendar within your first 30 days of going live, you pay absolutely nothing. We will refund your investment in full immediately. No questions, no hoop-jumping.”</p>
+                    <span class="subtext">SECURE • 30-DAY TRIAL WARRANTY</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="faq-section" id="faq">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">COMMONLY ASKED</span>
+                    <h2 class="section-title">Frictionless Compliance FAQ</h2>
+                </div>
+
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <button class="faq-trigger" onclick="toggleFaq(this)">Is Decana fully compliant with MCOB rules?</button>
+                        <div class="faq-content">
+                            <div class="faq-content-inner">
+                                Decana is designed to operate outside regulated advice boundaries, supporting your firm's MCOB obligations. By functioning purely as an intake receptionist that cannot discuss interest rates or recommend products, it prevents unauthorized advice.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger" onclick="toggleFaq(this)">Where is the client's financial data stored?</button>
+                        <div class="faq-content">
+                            <div class="faq-content-inner">
+                                All conversations, transcripts, and scheduled information are hosted in our UK-based sovereign data vault. We strictly do not use US-based cloud servers or unsecured Google Forms, complying with GDPR and local financial regulatory data sovereignty standards.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger" onclick="toggleFaq(this)">Can anyone call and find out the status of someone else's application?</button>
+                        <div class="faq-content">
+                            <div class="faq-content-inner">
+                                No. Decana never reads out case details and does not even confirm that an application exists. Status enquiries are logged and passed to you — the agent does not disclose client information to the caller under any circumstances. Calls from lenders, solicitors or valuers are escalated to you directly, never answered with case data.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger" onclick="toggleFaq(this)">Does Decana need access to my case management system?</button>
+                        <div class="faq-content">
+                            <div class="faq-content-inner">
+                                No. Decana works alongside whatever you already use — a full CRM, a spreadsheet, or nothing at all. It needs only your calendar to book appointments. Case status stays entirely with you.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger" onclick="toggleFaq(this)">What is the "Secure Status Triage" module?</button>
+                        <div class="faq-content">
+                            <div class="faq-content-inner">
+                                Decana does not read or disclose your case status — zero integration with lender systems is required. The agent instantly recognizes a status call, logs the inquiry, and sends you a structured notification. The client knows they’ve been heard immediately, and you can reply in one message whenever it suits you.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-trigger" onclick="toggleFaq(this)">How long does it take to deploy?</button>
+                        <div class="faq-content">
+                            <div class="faq-content-inner">
+                                Deployment takes less than 48 hours. Our engineering team handles your Calendly/CRM integration, configures your phone line divert, and puts the UK-hosted data vault online with zero technical effort required on your part.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Decana Intake Systems. All rights reserved.</p>
+            <p>Decana is an intake concierge service and does not offer financial or mortgage advice. Registered and hosted inside the United Kingdom.</p>
+        </div>
+    </footer>
+
+    <!-- INTERACTIVE SCRIPTS -->
+    <script>
+        // FAQ Accordion logic
+        function toggleFaq(button) {
+            const item = button.parentElement;
+            const isOpen = item.classList.contains('open');
+            
+            // Close all items
+            document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+            
+            // If it wasn't open, open it
+            if (!isOpen) {
+                item.classList.add('open');
+            }
+        }
+
+        // Live ROI Calculator Logic with Intellectually Honest Funnel Math
+        const slider = document.getElementById('cases-slider');
+        const bookedEl = document.getElementById('calc-booked');
+        const completedEl = document.getElementById('calc-completed');
+        const revenueEl = document.getElementById('calc-revenue');
+        const profitEl = document.getElementById('calc-profit');
+
+        slider.addEventListener('input', () => {
+            const booked = parseInt(slider.value);
+            const completed = booked * 0.3; // 30% conversion
+            const revenue = completed * 1000; // Smooth mathematical conversion
+            const profit = revenue - 299;
+
+            bookedEl.textContent = booked;
+            completedEl.textContent = completed.toFixed(1); // show fractional cases for analytical honesty
+            revenueEl.textContent = '£' + Math.round(revenue).toLocaleString();
+            profitEl.textContent = (profit >= 0 ? '+' : '-') + '£' + Math.round(Math.abs(profit)).toLocaleString();
+        });
+
+        // Interactive Form Simulator Logic
+        const step1 = document.getElementById('step-1');
+        const step2 = document.getElementById('step-2');
+        const step3 = document.getElementById('step-3');
+        const step4 = document.getElementById('step-4');
+        const nextBtn = document.getElementById('next-btn');
+        const dots = document.querySelectorAll('.dot');
+        const nav = document.querySelector('.simulator-nav');
+        
+        let currentStep = 1;
+
+        nextBtn.addEventListener('click', () => {
+            if (currentStep === 1) {
+                step1.classList.remove('active');
+                step2.classList.add('active');
+                dots[0].classList.remove('active');
+                dots[1].classList.add('active');
+                currentStep = 2;
+            } else if (currentStep === 2) {
+                step2.classList.remove('active');
+                step3.classList.add('active');
+                dots[1].classList.remove('active');
+                dots[2].classList.add('active');
+                nextBtn.textContent = 'Secure Appointment';
+                currentStep = 3;
+            } else if (currentStep === 3) {
+                const name = document.getElementById('client-name').value;
+                const email = document.getElementById('client-email').value;
+                const phone = document.getElementById('client-phone').value;
+
+                if (!name || !email || !phone) {
+                    alert('Please fill out all fields to complete the simulation.');
+                    return;
+                }
+
+                // Show confirmation screen instead of an alert
+                step3.classList.remove('active');
+                step4.classList.add('active');
+                nav.style.display = 'none';
+                currentStep = 4;
+            }
+        });
+
+        document.getElementById('restart-demo-btn').addEventListener('click', () => {
+            document.getElementById('intake-form').reset();
+            step4.classList.remove('active');
+            step1.classList.add('active');
+            dots[2].classList.remove('active');
+            dots[0].classList.add('active');
+            nav.style.display = 'flex';
+            nextBtn.textContent = 'Next Step →';
+            currentStep = 1;
+        });
+        
+        // Trigger initial calculation
+        slider.dispatchEvent(new Event('input'));
+    </script>
+</body>
+</html>
