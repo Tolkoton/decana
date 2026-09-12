@@ -15,6 +15,7 @@ const footerLinks = [
 
 export function Footer() {
   const [email, setEmail] = useState("")
+  const [isSubmitted, setIsSubmitted] = useState(false)
 
   return (
     <footer id="request-briefing" className="py-24 lg:py-32 border-t border-border/60">
@@ -28,29 +29,38 @@ export function Footer() {
             Enter your corporate email for a confidential architecture overview and deployment consultation.
           </p>
 
-          <form
-            className="mt-8 flex flex-col sm:flex-row gap-4 max-w-md mx-auto"
-            onSubmit={(e) => {
-              e.preventDefault()
-              // Handle form submission
-            }}
-          >
-            <Input
-              type="email"
-              placeholder="Enter your corporate email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1 bg-muted/50 border-border/60 text-foreground placeholder:text-muted-foreground focus:border-primary"
-              required
-            />
-            <Button
-              type="submit"
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+          {isSubmitted ? (
+            <div className="mt-8 p-6 bg-primary/10 border border-primary/30 rounded-lg max-w-md mx-auto text-center animate-in fade-in-0 duration-300">
+              <p className="text-primary font-semibold text-lg mb-2">✓ Briefing Requested!</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Thank you for your interest. A confidential architecture overview has been requested for <strong className="text-foreground">{email}</strong>. We will get back to you shortly.
+              </p>
+            </div>
+          ) : (
+            <form
+              className="mt-8 flex flex-col sm:flex-row gap-4 max-w-md mx-auto"
+              onSubmit={(e) => {
+                e.preventDefault()
+                setIsSubmitted(true)
+              }}
             >
-              Request Briefing
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </form>
+              <Input
+                type="email"
+                placeholder="Enter your corporate email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1 bg-muted/50 border-border/60 text-foreground placeholder:text-muted-foreground focus:border-primary"
+                required
+              />
+              <Button
+                type="submit"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Request Briefing
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </form>
+          )}
         </div>
 
         {/* Footer Bottom */}
