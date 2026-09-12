@@ -20,6 +20,7 @@ Usage:  uv run python scripts/smoke_dispatch.py
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import sys
 import tempfile
@@ -34,10 +35,12 @@ from decana.analysis.model import Analysis
 from decana.dispatch.dispatch import dispatch
 from decana.dispatch.model import DispatchReport
 from decana.profile.load import load_profile
+from decana.profile.model import Profile
 from decana.twilio.records import CallRecord, TranscriptTurn
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SID = "SMOKE_" + datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+PROFILE_NAME = os.environ.get("DECANA_PROFILE", "mortgage-broker")
 
 FIXTURE = (
     TranscriptTurn(role="model", text="Hello, thanks for calling. How can I help?"),
@@ -105,26 +108,37 @@ def _record(tmp: Path) -> CallRecord:
     )
 
 
-def _analysis() -> Analysis:
-    """Outcome drawn from the REAL profile's vocabulary, not a synthetic one.
+def _sms_outcome(profile: Profile) -> str:
+    """An outcome that ACTUALLY has an SMS template in this profile.
 
-    The unit suite uses a fabricated profile, so nothing there meets the shipped
-    `outcomes` tuple or the single `sms` key it actually carries. This is the only
-    place the two meet -- and on the first run they did not: the fixture said
-    `qualified_lead`, which is not in the vocabulary, so the SMS gate correctly
-    skipped and the smoke reported a missing marker.
+    Derived, never named. The unit suite uses a fabricated profile, so nothing
+    there meets a shipped `outcomes` tuple -- and on this script's first run a
+    hardcoded `qualified_lead` was not in the broker vocabulary at all, so the
+    gate correctly skipped and the smoke reported a missing marker. Deriving it
+    also lets this script run against ANY profile, which is the property the
+    whole feature is judged on (a new vertical is a directory, not a code change).
     """
+    for outcome in profile.outcomes:
+        if outcome in profile.sms:
+            return outcome
+    raise SystemExit(
+        f"{profile.name}: no outcome has an SMS template; smoke cannot run"
+    )
+
+
+def _analysis(profile: Profile) -> Analysis:
+    outcome = _sms_outcome(profile)
     return Analysis(
-        outcome="new_client",
+        outcome=outcome,
         compliance_notes=("Did not restate the recording notice.",),
         summary="Caller wants to remortgage a flat in Manchester, ~180k outstanding.",
-        raw='{"outcome": "new_client"}',
+        raw=json.dumps({"outcome": outcome}),
     )
 
 
 def tier1() -> int:
     """The filesystem half, end to end, against the real tree."""
-    profile = load_profile("mortgage-broker", root=REPO_ROOT / "profiles")
+    profile = load_profile(PROFILE_NAME, root=REPO_ROOT / "profiles")
     failures: list[str] = []
 
     def check(label: str, ok: bool, detail: str = "") -> None:
@@ -137,13 +151,15 @@ def tier1() -> int:
     with tempfile.TemporaryDirectory() as raw:
         tmp = Path(raw)
         sms, email = _FakeSms(tmp), _FakeEmail(tmp)
-        record, analysis = _record(tmp), _analysis()
+        record, analysis = _record(tmp), _analysis(profile)
 
         report: DispatchReport = asyncio.run(
             dispatch(record, analysis, profile, sms=sms, email=email, artifact_dir=tmp)
         )
 
-        print(f"\nTIER 1 — real filesystem, fake senders (artifact_dir={tmp})")
+        print(
+            f"\nTIER 1 — real filesystem, fake senders (profile={profile.name}, artifact_dir={tmp})"
+        )
         check(
             "all three files exist",
             all(
@@ -181,7 +197,7 @@ def tier1() -> int:
         )
         check(
             "brief carries the outcome in the body",
-            "## Outcome\nnew_client" in brief,
+            f"## Outcome\n{analysis.outcome}" in brief,
         )
         check(
             "non-ASCII survived the transcript round-trip",
@@ -218,7 +234,7 @@ def tier2() -> int:
 
     from decana.dispatch.senders import SmtpEmailSender
 
-    profile = load_profile("mortgage-broker", root=REPO_ROOT / "profiles")
+    profile = load_profile(PROFILE_NAME, root=REPO_ROOT / "profiles")
     sender = SmtpEmailSender(
         os.environ["SMTP_HOST"],
         int(os.environ["SMTP_PORT"]),
@@ -256,7 +272,7 @@ def tier3() -> int:
 
     from decana.dispatch.senders import TwilioSmsSender
 
-    profile = load_profile("mortgage-broker", root=REPO_ROOT / "profiles")
+    profile = load_profile(PROFILE_NAME, root=REPO_ROOT / "profiles")
     sid = TwilioSmsSender(
         os.environ["TWILIO_ACCOUNT_SID"], os.environ["TWILIO_AUTH_TOKEN"]
     ).send(to=to, sender_id=profile.sms_sender_id, body=f"decana smoke {SID}")

@@ -16,8 +16,15 @@ guessing.
 - **Mutation evidence: 42 mutations, 42 KILLED.** Three survived on the first pass and every
   one was a hole in the TEST, not the code — see the ledger entry
   `2026-09-12T03:00:00Z — dispatch (S5) — SLICE_TESTS_COMPLETE` for each.
-- **Smoke: `scripts/smoke_dispatch.py` TIER 1 PASSED, 13/13 assertions**, against the real
-  filesystem and the real shipped profile. No human oracle; run it yourself in seconds.
+- **Smoke: `scripts/smoke_dispatch.py` TIER 1 PASSED, 13/13** — for **BOTH** shipped
+  profiles (`mortgage-broker` and `eco-consultant`), env var only, no code change. It reads
+  `DECANA_PROFILE` and DERIVES an outcome that has an SMS template rather than naming one.
+  That is A4's property demonstrated for S5 ahead of S7. No human oracle; runs in seconds.
+- **Cross-slice vocabulary check: CLEAN, no mismatch.** `src/` hardcodes zero shipped
+  category names; S3 never mentions `outcome`; S4 builds its enum from `profile.outcomes`
+  and downgrades anything outside it; S5 reads `profile.sms.get(...)`. Both `analysis.md`
+  prompts enumerate exactly their own `outcomes.allowed` plus `unclassified`. Full result:
+  ledger `2026-09-12T04:00:00Z — CROSS_SLICE_VOCABULARY_CHECK`.
 - **Checks:** `ruff check`, `ruff format --check`, `uv run mypy --strict src scripts tests`
   all clean (46 files).
 - **Next unblocked item: NOTHING in S5.** The remaining feature nodes are **S6 deploy** and

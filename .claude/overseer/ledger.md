@@ -19,6 +19,45 @@ Categories follow Trajectory-Informed Memory Generation (arXiv 2603.10600):
 - **optimization** — inefficient pattern worth flagging next time
 - **none** — routine entry, no pattern of note
 
+## 2026-09-12T04:00:00Z — dispatch (S5) — CROSS_SLICE_VOCABULARY_CHECK
+- Trigger: owner request after the smoke exposed that 314 unit tests ran against a
+  fabricated outcome vocabulary
+- Evidence: grep over `src/` and `scripts/`; `analyse.py:70` and `:114`; both shipped
+  `profile.toml` + `analysis.md` pairs; `smoke_dispatch.py` run against BOTH profiles
+- Action: checked, then PROVED. **No contract mismatch exists.** Fixed the one real
+  brittleness found, in this session's own smoke script.
+- Category: strategy
+
+### The result: the vocabulary is read from the profile everywhere, by every consumer
+- **`src/` hardcodes ZERO shipped category names.** Verified by grep for all seven
+  (`new_client`, `not_qualified`, `callback_requested`, `existing_client`, `survey_booked`,
+  `not_eligible`, `info_only`). The only hits were in this session's own smoke script.
+- **S3 references `outcome` zero times** — correct, it runs before any analysis exists.
+- **S4 builds the enum from the profile**: `{"enum": [*profile.outcomes, UNCLASSIFIED]}`
+  (`analyse.py:70`), and downgrades anything outside that set to `unclassified`
+  (`analyse.py:114`). A profile-specific category can never reach S5 unrecognised.
+- **S5 consumes it three ways**, all profile-derived: `profile.sms.get(analysis.outcome)`
+  (a missing key is a deliberate skip), the brief body, the email subject.
+- **Prompt and schema AGREE for both profiles.** Each `analysis.md` enumerates exactly its
+  own `outcomes.allowed` four, and each explicitly instructs `unclassified` as the fallback.
+  This was the likeliest mismatch — a prompt naming categories the schema forbids — and it
+  is not present.
+
+### Proved, not asserted: the smoke now runs against BOTH shipped profiles
+The smoke hardcoded `load_profile("mortgage-broker")` AND a matching outcome literal, so it
+could only ever prove the broker path. Now it reads `DECANA_PROFILE` and DERIVES an outcome
+that actually has an SMS template. Result: **13/13 assertions pass for `mortgage-broker` AND
+for `eco-consultant`, with no code change — an env var only.** That is A4's ratified property
+("`git diff --stat` touches `profiles/` only") demonstrated for S5 ahead of S7, and it also
+exercised the eco profile's TWO-link template, where the broker's carries one.
+
+### One property worth stating because it is silent
+`unclassified` can never carry an SMS template: S1 rejects it inside `outcomes`, and
+`profile.sms` keys must be a subset of `outcomes`. So a call whose analysis failed sends no
+SMS, ever. That is correct — you do not text a prospect about a call you could not classify —
+but it means an analysis failure degrades to email-only, reported via D4.a's skip line in the
+brief. Not a defect; a consequence nobody had written down.
+
 ## 2026-09-12T03:00:00Z — dispatch (S5) — SLICE_TESTS_COMPLETE
 - Trigger: none (routine; logged, not escalated)
 - Evidence: `check_ids.py` reports `dispatch OK 54 ids, 54 covered`, clean BOTH directions.
