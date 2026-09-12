@@ -1,4 +1,3 @@
-plugins = []
 headers = []
 redirects = []
 
@@ -6,10 +5,18 @@ redirects = []
 
 [functions."*"]
 
+[[plugins]]
+origin = "default"
+package = "@netlify/plugin-nextjs"
+
+[plugins.inputs]
+
 [build]
-publish = "/home/lao/.openclaw/workspace/projects/decana-repo/landings/mortgage brokers"
-publishOrigin = "default"
+publish = "/home/lao/.openclaw/workspace/projects/decana-repo/landings/mortgage brokers/.next"
+publishOrigin = "ui"
+commandOrigin = "ui"
 base = "/home/lao/.openclaw/workspace/projects/decana-repo/landings/mortgage brokers"
+command = "pnpm run build"
 
 [build.environment]
 
