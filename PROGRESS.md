@@ -9,20 +9,54 @@ guessing.
 
 ---
 
-## NOW — S5 `dispatch` planned; `brief.py` built, 14/54 ids green (updated 2026-09-12)
+## NOW — S5 `dispatch` BUILT: 54/54 ids green, smoke tier 1 passed (updated 2026-09-12)
+
+- **Ids green: 54 of 54.** `scripts/check_ids.py` reports `dispatch OK 54 ids, 54 covered`,
+  clean in BOTH directions. **Suite: 314 passed** (was 260).
+- **Mutation evidence: 42 mutations, 42 KILLED.** Three survived on the first pass and every
+  one was a hole in the TEST, not the code — see the ledger entry
+  `2026-09-12T03:00:00Z — dispatch (S5) — SLICE_TESTS_COMPLETE` for each.
+- **Smoke: `scripts/smoke_dispatch.py` TIER 1 PASSED, 13/13 assertions**, against the real
+  filesystem and the real shipped profile. No human oracle; run it yourself in seconds.
+- **Checks:** `ruff check`, `ruff format --check`, `uv run mypy --strict src scripts tests`
+  all clean (46 files).
+- **Next unblocked item: NOTHING in S5.** The remaining feature nodes are **S6 deploy** and
+  **S7 real calls**, both marked HUMAN-REQUIRED in the queue below. Per the work loop, that
+  is the terminal condition: the DAG has no node left that can run without a human.
+- **PARKED, each on a named unblocker:**
+  - `scripts/smoke_dispatch.py` TIER 2 — needs `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/
+    `SMTP_PASSWORD`/`SMTP_FROM`. Until it runs, `SmtpEmailSender` is verified only by a fake
+    it implements.
+  - `scripts/smoke_dispatch.py` TIER 3 — needs `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` and
+    `DECANA_SMOKE_SMS_TO`. Costs money; spends the `_budget` cap before opening a socket.
+    This is the only check that P2's `Optional[str]` narrowing is right about a REAL response.
+  - `scripts/smoke_twilio_server.py`, `scripts/smoke_analysis.py` — `GEMINI_API_KEY`.
+  - **S6** — cloud credentials. **S7** — a provisioned number and a human with a phone.
+- **Staged, uncommitted:** everything. The owner commits; the hook allows commits only on an
+  `unattended/<date>` branch.
+
+**S5 changed files OUTSIDE `src/decana/dispatch/`** (Q24's authoritative list):
+`src/decana/settings.py` (+7 optional fields, +`has_twilio`/`has_smtp`),
+`src/decana/twilio/server.py` (`build_on_call_end` REMOVED — it moved to
+`dispatch/wiring.py` so S3 never imports S4/S5), `src/decana/__main__.py` (import + call site,
+now `build_on_call_end(settings, profile)`), `src/decana/analysis/analyse.py` (`__all__`
++`render_transcript`), `pyproject.toml` (+twilio, +scoped mypy override), `scripts/check_ids.py`
+(+the `dispatch` row).
+
+## Superseded — S5 planned, `brief.py` built (2026-09-12, earlier in the same session)
 
 - **Ids green: 14 of 54** — `D3.a` `D3.b` `D8.a` `D19.a` `D19.b` `D19.c` `D20.a` `D20.b`
   `D20.c` `D20.d` `D21.a` `D21.b` `D21.c` `D21.d`. **Suite: 277 passed** (was 260).
 - **Built so far:** `src/decana/dispatch/{__init__,errors,model,brief}.py`. `render_brief`
   is complete against the ratified Q21 template; **10 mutations run, 10 killed**, including
   the prefix-parsing renderer and the two-line-difference mutant.
-- **Next unblocked item: `senders.py`** — `D9.a` `D9.b` (the `Optional[str]` narrowing),
-  `D11.a` `D11.b` (SMTP transport by port), `D21.e` `D21.f` (sender kwargs), `D17.a`.
-  Then `dispatch.py` (the bulk), then `wiring.py` + `Settings` + `__main__.py`.
+- ~~Next unblocked item: `senders.py` …~~ **ALL DONE — superseded by the live `## NOW`
+  block at the top of this file. Do not act on this line.**
 - **`scripts/check_ids.py` now registers `dispatch`** and correctly reports `DIRTY 54 ids,
   14 covered` with the missing list. Before that row existed it printed `SKIP` and exited 0.
-- **PARKED: none.** Nothing in this slice needs a credential to build — the senders are
-  injected and fake-driven. The smoke's tiers 2/3 park on `SMTP_*` / `TWILIO_*` at Step 5.
+- ~~PARKED: none.~~ **Superseded — the live `## NOW` block's PARKED list is authoritative.**
+  (It was true while building: nothing in the slice needed a credential. The smoke's tiers
+  2 and 3 now park, as predicted here.)
 - **Staged, uncommitted:** everything — the S4 port from the reconciliation session AND
   this session's S5 planning + `brief.py`. The owner has the two suggested commit commands;
   the hook allows commits only on `unattended/<date>`.
@@ -72,15 +106,17 @@ not a technical one, and wasn't re-litigated here. Flag for the owner if the two
 hook rewrites need reconciling too.
 
 - **S3's 4 "pending ratification" items are still open** — see the S3 entry
-  below. Not blocking S5 (S5 doesn't touch `server.py`), but still owner sign-off
-  before S3 is genuinely DONE.
+  below; still owner sign-off before S3 is genuinely DONE. **Correction: S5 DOES
+  touch `server.py`** — Q24 removed `build_on_call_end` from it. None of the four
+  pending items concerns that function, so they are still independent, but the
+  parenthetical as originally written is false.
 - **Suite: 260 passed** (`uv run pytest`), `ruff check` / `ruff format --check`
   clean, `mypy --strict src scripts tests` clean.
 - **S5 `dispatch` is PLANNED (2026-09-12), not yet built.** Contract:
   `.claude/overseer/slice/dispatch.md` — 24 decisions, 23 seams, 54 ratified ids, 54
   mutations, 4-part exit criterion. Converged after 25 round-anchored critic rounds and 9
   cold reads; 2 owner escalations, both resolved.
-- ~~Next unblocked item: BUILD S5 from that artifact.~~ **DONE / IN PROGRESS — see the
+- ~~Next unblocked item: BUILD S5 from that artifact.~~ **DONE — 54/54 ids green. See the
   live `## NOW` block at the top of this file, which supersedes this line.** The
   `scripts/check_ids.py` registration it called for has landed.
 - **Two ratified-text amendments landed this session**, both owner-ratified and tagged in
@@ -134,6 +170,64 @@ non-zero id count is the evidence, not `$?`.
 | **S5 dispatch** | **PLANNED, next to BUILD** | artifact: `.claude/overseer/slice/dispatch.md`; fake-driven, no credentials needed |
 | S6 deploy | HUMAN-REQUIRED | Cloud Run + cloud credentials |
 | S7 real calls | HUMAN-REQUIRED | provisioned number + a human with a phone |
+
+## Slice S5 — dispatch (DONE 2026-09-12)
+
+Feature `vertical-profile-bridge`, slice S5. Contract:
+`.claude/overseer/slice/dispatch.md`. Planned and built in one session.
+
+- **Modules:** `src/decana/dispatch/{__init__,errors,model,brief,senders,dispatch,wiring}.py`
+  (662 LOC). Outside the package: `settings.py` (+7 optional fields, +2 group predicates),
+  `twilio/server.py` (`build_on_call_end` removed), `__main__.py` (call site),
+  `analysis/analyse.py` (`__all__`), `pyproject.toml`, `scripts/check_ids.py`.
+- **Tests:** `tests/test_dispatch.py`, **54 ids, 54 covered, clean both directions**
+  (`scripts/check_ids.py`). Suite 260 -> 314.
+- **Mutation evidence: 42 of 42 killed.** Tree verified free of residue after every run.
+- **Smoke:** `scripts/smoke_dispatch.py` TIER 1 **PASSED** (13/13) against the real
+  filesystem and the real shipped profile. Tiers 2 (SMTP) and 3 (Twilio) **PARKED** on
+  credentials — see `## NOW`.
+- **Checks:** `ruff check`, `ruff format --check`, `mypy --strict src scripts tests` clean.
+
+### Surprises
+
+- **Every mutation that survived was a hole in the TEST, not the code.** Three of them.
+  `D1.a` asserted `ticks > 0`, which held under a direct call too because the ticker gets one
+  tick in before the block starts. `D22.c` passed on any UTF-8 dev box whether or not the code
+  named its encoding. `D8.a` drove the renderer with hand-built outcomes and so never
+  exercised `dispatch`'s own conversion — "a fake cannot be evidence for the contract the fake
+  implements", in the most literal form yet.
+- **A patch written to expose a defect can hide it instead.** The first `io.text_encoding`
+  patch ignored its argument, so it overrode the explicit `encoding="utf-8"` as well as the
+  default — making the test fail for a reason unrelated to the property. `write_text` calls
+  `io.text_encoding(encoding)` unconditionally; only a patch that honours the argument
+  emulates "the process default is ascii".
+- **Two planning decisions predicted defects I then committed.** Q18 says the stage boundary
+  spans content production, not just the I/O call — I computed the email body outside the
+  wrapper, and `D14.a` caught it. Q17 requires `post_call` to guard what is left — I omitted
+  the `try/except` entirely, and `D10.a` caught it. The artifact was right and the
+  implementation was wrong, which is the direction that check exists to catch.
+- **314 unit tests never meet the shipped profile's vocabulary.** The suite's profile is
+  fabricated; the real one is `new_client`/`not_qualified`/`callback_requested`/
+  `existing_client` with one SMS template. The smoke's first run used `qualified_lead` and the
+  gate correctly skipped. The smoke is the only place the two touch.
+- **`ruff format` reflowed a line between my writing a replacement and running it**, so a
+  `str.replace` silently matched nothing and the assertion stayed stale. Caught by re-running
+  the smoke, not by reading. This is the argument for `Edit` over scripted replacement.
+
+### Open for the next slice
+
+- **S6 inherits the seven new env vars.** `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` and the
+  five `SMTP_*` must reach the Cloud Run service from Secret Manager. They gate
+  INDEPENDENTLY (Q23): a missing Twilio secret costs only the SMS, never the email or the
+  evidence files.
+- **`build_on_call_end` now lives in `decana.dispatch.wiring`**, not `twilio/server.py`, and
+  takes `(settings, profile)`. `D24.a` asserts by AST that `server.py` imports nothing from
+  `decana.dispatch`/`decana.analysis` — that constraint is now mechanical, not conventional.
+- **S7 must capture 7a's artifacts BEFORE 7b's first redeploy.** Written into the feature
+  doc's row 7b and Edge S7. S5's artifacts live on instance disk and a redeploy destroys them.
+- **The brief's wording is ratified text** (Q19/Q21, nine status lines plus the content
+  blocks). Changing it changes what `D3.a`/`D19.c`/`D20.*`/`D21.*` assert — escalate rather
+  than edit.
 
 ## Slice S3 — twilio-server (DONE 2026-08-27, pending 4 ratifications)
 

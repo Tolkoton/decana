@@ -66,3 +66,16 @@ exclude = ["^hook-checks/", "^\\.claude/"]
 [[tool.mypy.overrides]]
 module = ["soxr", "soxr.*"]
 ignore_missing_imports = true
+
+# twilio 9.11.1 ships no py.typed marker and no stubs (verified 2026-09-12, spike
+# .claude/artifacts/spikes/dispatch-sdk-surfaces-2026-09-12.json). Same scoped treatment as
+# soxr above, one module further -- NOT a global ignore, which would silently un-type every
+# future dependency.
+#
+# This alone is NOT sufficient: the import stops erroring, but the module stays `Any`, so
+# `return client.messages.create(...).sid` then fails as [no-any-return]. The adapter has to
+# narrow at the boundary, which it must do anyway -- `MessageInstance.sid` is `Optional[str]`
+# (SDK source message/__init__.py:119), not the `str` the ratified contract types.
+[[tool.mypy.overrides]]
+module = ["twilio", "twilio.*"]
+ignore_missing_imports = true

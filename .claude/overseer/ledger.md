@@ -19,6 +19,51 @@ Categories follow Trajectory-Informed Memory Generation (arXiv 2603.10600):
 - **optimization** — inefficient pattern worth flagging next time
 - **none** — routine entry, no pattern of note
 
+## 2026-09-12T03:00:00Z — dispatch (S5) — SLICE_TESTS_COMPLETE
+- Trigger: none (routine; logged, not escalated)
+- Evidence: `check_ids.py` reports `dispatch OK 54 ids, 54 covered`, clean BOTH directions.
+  Suite 260 -> 314. `ruff`/`ruff format`/`mypy --strict src scripts tests` clean (46 files).
+  `scripts/smoke_dispatch.py` TIER 1 PASSED, 13/13 assertions; tiers 2/3 PARKED.
+- Action: built all of S5 -- `src/decana/dispatch/{__init__,errors,model,brief,senders,dispatch,wiring}.py`
+  (662 LOC), `Settings` +7 optional fields +2 group predicates, `build_on_call_end` MOVED out of
+  `twilio/server.py` per Q24, `__main__.py` call site updated, `analyse.py.__all__` +render_transcript,
+  `pyproject.toml` +twilio mypy override.
+- **Mutation evidence: 42 mutations, 42 KILLED.** Tree verified free of residue after every run.
+- Category: strategy
+
+### Three mutations SURVIVED first, and every one was a hole in the TEST, not the code
+This is the entry's real content. All three were found by mutation, none by reading.
+
+1. **`D1.a` (to_thread) SURVIVED.** The test asserted `ticks > 0` after the sender began
+   blocking -- but the ticker gets one tick in BEFORE the block starts, so the assertion held
+   under a direct call too. Rewritten to a binary with no threshold to tune: the sender waits
+   on an event that only a coroutine can set, so `released is True` is reachable ONLY if the
+   loop kept running. KILLED after.
+2. **`D22.c` (UTF-8 encoding) SURVIVED**, because the dev box's locale is already UTF-8, so a
+   bare `write_text` behaves identically. `io.text_encoding` turned out to be the hook --
+   patched to `"ascii"` it makes a bare write raise while an explicit `encoding=` passes
+   through. First attempt at that patch was itself wrong: `pathlib.write_text` calls
+   `io.text_encoding(encoding)` UNCONDITIONALLY, so a lambda ignoring its argument overrode
+   the explicit `"utf-8"` too and proved nothing. KILLED after honouring the argument.
+3. **`D8.a` (failed vs skipped) SURVIVED.** Its test drove `render_brief` with HAND-BUILT
+   outcomes, so it never exercised `dispatch`'s conversion of a real failure -- "a fake cannot
+   be evidence for the contract the fake implements", exactly. Extended to assert the brief
+   text on the path where `dispatch` COMPUTES the outcome. KILLED after.
+
+### Two defects the tests caught in the implementation
+- **Q18's boundary, violated by me.** I computed the email body OUTSIDE the email stage's
+  wrapper, so a `render_brief` failure escaped `dispatch` instead of being attributed to the
+  `email:` stage. `D14.a` failed and named it. Q18 predicted this exact defect at plan time.
+- **Q17's guard, missing entirely.** `post_call` had no `try/except`, so a failing
+  `artifact_dir.mkdir` propagated into S3's teardown. `D10.a` failed and named it.
+
+### What the smoke found that no fake could
+The unit suite uses a FABRICATED profile. The real `mortgage-broker` profile's vocabulary is
+`new_client`/`not_qualified`/`callback_requested`/`existing_client`, with an SMS template for
+`new_client` only. The smoke's first run used `qualified_lead` -- not in the vocabulary -- so
+the gate correctly skipped and the smoke reported a missing marker. Nothing in 314 unit tests
+meets the shipped vocabulary; the smoke is the only place the two ever touch.
+
 ## 2026-09-12T01:00:00Z — dispatch (S5) — UNIT_COMPLETE (brief.py)
 - Trigger: none (routine unit; logged, not escalated)
 - Evidence: tests/test_dispatch.py 17 nodes; suite 260 -> 277; check_ids reports

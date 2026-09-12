@@ -34,30 +34,9 @@ from decana.gemini.live import AudioChunk, Closed, Interrupted, LiveEvent, Trans
 from decana.profile.model import Profile
 from decana.twilio.records import CallRecord, OnCallEnd, TranscriptTurn
 
-__all__ = ["LiveSession", "LiveSessionFactory", "build_on_call_end", "create_app"]
+__all__ = ["LiveSession", "LiveSessionFactory", "create_app"]
 
 logger = logging.getLogger(__name__)
-
-
-def build_on_call_end() -> OnCallEnd:
-    """The tracer's post-call handler: log the record, do nothing else.
-
-    A factory rather than a bare function because S5 replaces this body with
-    `post_call` once analysis and dispatch exist, and it will need its own
-    injected senders. Keeping the seam a factory now means that change touches
-    one function, not `__main__`'s wiring.
-    """
-
-    async def _log_only(record: CallRecord) -> None:
-        logger.info(
-            "call %s ended (%s) after %d turns; timing log at %s",
-            record.call_sid,
-            record.ended_reason,
-            len(record.transcript),
-            record.timing_path,
-        )
-
-    return _log_only
 
 
 class LiveSession(Protocol):

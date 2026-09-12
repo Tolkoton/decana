@@ -21,6 +21,53 @@ memory pollution and confabulation amplification.
 
 ## Cross-slice patterns
 
+### A verification defaults to PASSING when it does not recognise its input
+
+**Owner-ratified 2026-09-12 as a consolidated class.** Five instances across four slices, so
+this clears the 3-slice bar on its own. Each was previously filed as a one-off; they are one
+defect wearing five costumes.
+
+**Pattern.** A check is handed something it was not built to recognise — an unregistered
+slug, a mutation that never landed, a path that collects no tests, a directory outside its
+configured scope, a stub with nothing in it yet — and **reports success**. Not an error, not
+a warning: the same green a real pass produces. The check is then cited as evidence.
+
+| instance | the unrecognised input | what it reported |
+|---|---|---|
+| `check_ids.py`'s `SKIP` branch (`dispatch`, 2026-09-12) | a slug absent from `SLICES`, or a missing test file | prints `SKIP`, `continue`s **without setting `dirty`**, exits 0 — having checked nothing |
+| the first mutation harness (`voice-intake-demo`, Seam 5) | a mutation whose text never matched | "SURVIVED" — recorded as evidence that a test was weak |
+| `mutate_check.py`'s own interface (`twilio-server`) | `"file -k name"` passed as ONE argument -> pytest found no such path | collected zero tests, zero failures -> read as "survived" |
+| bare `uv run mypy` (`gemini-live`) | `tests/` — outside `pyproject.toml`'s `files` | "Success", while never opening the suite. Two real errors hid there |
+| the `app` fixture's `live_factory` guard (`twilio-server`) | an endpoint that was still an empty stub | passed, because nothing had been implemented to violate it |
+
+**Why it keeps happening.** Every one of these is a *sensible-looking* default. Skipping an
+unknown slug, not failing on a no-op mutation, honouring a config scope, a guard that nothing
+has tripped — each is defensible in isolation, and each turns the check into a no-op exactly
+when its input is the thing nobody thought about.
+
+**How to apply — build checks to FAIL CLOSED on unrecognised input.**
+- A check that cannot evaluate its subject **exits non-zero**, or it is not a check. `SKIP`
+  is a legitimate state only if it is also a failure state, or is asserted against an
+  expected-skip list.
+- **Assert the check's own preconditions before trusting its verdict**: the mutation applied;
+  tests were actually collected (a run that collected 0 is a hard error); the slug is
+  registered; the path is in scope.
+- **Read the printed line, never the exit code**, when a tool can report per-subject status.
+  `$?` is the wrong oracle for anything that loops over subjects.
+- When you write a new check, ask: *what input makes this say "fine" without looking?* That
+  question has found a defect every time it has been asked here.
+
+**Citations (per the citation-or-prune rule above):**
+- `ledger.md` 2026-09-12T00:00:00Z — dispatch (S5) — PLANNING_COMPLETE, category `strategy`.
+  The `check_ids.py` `SKIP`-exits-0 instance, and the `PROGRESS.md` claim it falsified
+  ("covers every slice" — it covers 2 of 4).
+- `ledger.md` 2026-08-27T09:00:00Z — twilio-server — PLANNING_COMPLETE, category `strategy`.
+  The `mutate_check.py` interface instance and the stub-passing fixture guard.
+- `ledger.md` 2026-08-25T21:56:31Z — voice-intake-demo — OVERSEER_ESCALATE, category
+  `recovery`. The never-applied mutation recorded as evidence.
+- `mutate_check.py`'s own module docstring now enumerates three of these as the reasons it
+  exists — the fix is in that file, the pattern is here.
+
 ### Artifacts state name-claims and third-party-behaviour claims at the same confidence as claims we control
 
 **Admitted under the manual-ratification clause, owner-ratified 2026-08-26; the re-check it demanded has now run.** The original entry said "observed on **one** slice (`voice-intake-demo`) — re-check against slice 2 before treating it as settled." Slice 2 (`gemini-live`) is done, and the pattern recurred twice more, in a new library and against a new failure surface. That is **two** slices, not three, so this still does not clear the 3-slice bar on its own — but it is no longer a single-slice observation, and the two new instances are the first that were caught *before* shipping rather than after. Re-check again against slice 3 (`twilio-server`), where the third-party surface is a wire protocol rather than an SDK.

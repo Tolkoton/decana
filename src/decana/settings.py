@@ -65,9 +65,44 @@ class Settings:
     artifact_dir: Path
     port: int
 
+    # Optional-until-present (S5-Q9). Ratified so the tracer build never requires
+    # secrets it does not use; S5 reads them and degrades per GROUP, never globally.
+    twilio_account_sid: str | None = None
+    twilio_auth_token: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+
+    @property
+    def has_twilio(self) -> bool:
+        """Both Twilio credentials present. Gates the SMS sender and NOTHING else."""
+        return bool(self.twilio_account_sid and self.twilio_auth_token)
+
+    @property
+    def has_smtp(self) -> bool:
+        """All five SMTP settings present. Gates the email sender and NOTHING else.
+
+        The two groups are deliberately independent (S5-Q23): a single
+        `all(seven)` gate would let a missing Twilio credential disable the
+        operator's email, which ratified guarantee (c) promises unconditionally.
+        """
+        return all(
+            v is not None
+            for v in (
+                self.smtp_host,
+                self.smtp_port,
+                self.smtp_user,
+                self.smtp_password,
+                self.smtp_from,
+            )
+        )
+
     @staticmethod
     def from_env(env: Mapping[str, str] | None = None) -> Settings:
-        """Flow: read the required three, then the optional four with defaults.
+        """Flow: read the required three, the optional four with defaults, then the
+        seven optional credentials S5 added (none of which this process requires).
 
         `env` is injectable so the failure path is testable without mutating the
         real process environment -- the one thing a test of "what happens when a
@@ -83,4 +118,11 @@ class Settings:
             ),
             artifact_dir=Path(env.get("DECANA_ARTIFACT_DIR") or _DEFAULT_ARTIFACT_DIR),
             port=int(env.get("PORT") or _DEFAULT_PORT),
+            twilio_account_sid=env.get("TWILIO_ACCOUNT_SID"),
+            twilio_auth_token=env.get("TWILIO_AUTH_TOKEN"),
+            smtp_host=env.get("SMTP_HOST"),
+            smtp_port=int(env["SMTP_PORT"]) if env.get("SMTP_PORT") else None,
+            smtp_user=env.get("SMTP_USER"),
+            smtp_password=env.get("SMTP_PASSWORD"),
+            smtp_from=env.get("SMTP_FROM"),
         )

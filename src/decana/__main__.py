@@ -10,17 +10,19 @@ test covers. Its one job is to be the place where the real collaborators meet
 the app, and Seam 17 checks it by starting the actual process.
 
 WHAT THIS DOES NOT DO: no argument parsing, no defaulting (that is `Settings`),
-no post-call work (`build_on_call_end` is the log-only no-op until S5).
+no post-call work (`build_on_call_end` lives in `decana.dispatch.wiring` -- S5-Q24,
+moved there so S3 never imports S4/S5).
 """
 
 from functools import partial
 
 import uvicorn
 
+from decana.dispatch.wiring import build_on_call_end
 from decana.gemini.live import open_live_session
 from decana.profile.load import load_profile
 from decana.settings import Settings
-from decana.twilio.server import build_on_call_end, create_app
+from decana.twilio.server import create_app
 
 __all__ = ["main"]
 
@@ -32,7 +34,7 @@ def main() -> None:
     app = create_app(
         profile,
         partial(open_live_session, api_key=settings.gemini_api_key),
-        build_on_call_end(),
+        build_on_call_end(settings, profile),
         public_wss_url=settings.public_wss_url,
         artifact_dir=settings.artifact_dir,
     )
