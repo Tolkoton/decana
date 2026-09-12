@@ -46,8 +46,8 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-              Request Briefing
+            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <a href="#request-briefing">Request Briefing</a>
             </Button>
           </div>
 
@@ -74,8 +74,8 @@ export function Navbar() {
                   {link.label}
                 </a>
               ))}
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 w-full">
-                Request Briefing
+              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 w-full">
+                <a href="#request-briefing" onClick={() => setMobileMenuOpen(false)}>Request Briefing</a>
               </Button>
             </div>
           </div>

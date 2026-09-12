@@ -107,9 +107,11 @@ export function HeroSection() {
             >
               View Platform Overview
             </Button>
-            <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
-              Request a Briefing
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <a href="#request-briefing">
+                Request a Briefing
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
             </Button>
           </div>
         </div>

@@ -25,7 +25,7 @@ export function CapabilitiesShowcase() {
         </div>
 
         {/* Main Feature Card */}
-        <Card className="bg-card border-border/60 p-8 lg:p-12 max-w-4xl mx-auto">
+        <Card id="compliance" className="bg-card border-border/60 p-8 lg:p-12 max-w-4xl mx-auto">
           <div className="space-y-8">
             {/* Badge & Header */}
             <div>

@@ -17,7 +17,7 @@ export function Footer() {
   const [email, setEmail] = useState("")
 
   return (
-    <footer className="py-24 lg:py-32 border-t border-border/60">
+    <footer id="request-briefing" className="py-24 lg:py-32 border-t border-border/60">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         {/* CTA Section */}
         <div className="text-center max-w-2xl mx-auto mb-16">
