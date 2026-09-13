@@ -30,6 +30,8 @@ import binascii
 from typing import Protocol
 
 from decana.bridge.codec import AudioFrameError, mulaw_decode, mulaw_encode
+from decana.bridge.gain import apply_gain
+from decana.bridge.recording import CallRecorder
 from decana.bridge.resampler import Resampler
 from decana.bridge.timing import TimingRecorder
 
@@ -77,12 +79,20 @@ class BridgeSession:
         timing: TimingRecorder,
         inbound: Resampler,
         outbound: Resampler,
+        recorder: CallRecorder | None = None,
+        inbound_gain: float = 1.0,
     ) -> None:
         self._twilio = twilio
         self._gemini = gemini
         self._timing = timing
         self._inbound = inbound
         self._outbound = outbound
+        # Optional and last, so every ratified construction site stays valid.
+        # Records the mu-law bytes that cross each leg (owner request 2026-09-13).
+        self._recorder = recorder
+        # Linear factor applied to caller audio after decode, before resample
+        # (`decana.bridge.gain`). 1.0 is a byte-for-byte no-op.
+        self._inbound_gain = inbound_gain
 
     def start(self) -> None:
         """Record `call_answered`, the first event of every call (Q16).
@@ -121,8 +131,11 @@ class BridgeSession:
         stage = "base64"
         try:
             mulaw = decode_base64_frame(base64_payload)
+            self._record_caller(mulaw)
             stage = "codec"
             pcm8k = mulaw_decode(mulaw)
+            stage = "gain"
+            pcm8k = apply_gain(pcm8k, self._inbound_gain)
             stage = "resample"
             pcm16k = self._inbound.push(pcm8k)
             self._forward_to_gemini(pcm16k)
@@ -204,8 +217,23 @@ class BridgeSession:
         if not pcm8k:
             return
         mulaw = mulaw_encode(pcm8k)
+        self._record_model(mulaw)
         self._twilio.send_media(base64.b64encode(mulaw).decode("ascii"))
         self._timing.record("chunk_forwarded_to_twilio")
+
+    def _record_caller(self, mulaw: bytes) -> None:
+        """Hand the caller leg's bytes to the recorder, if one is attached."""
+        if self._recorder is not None:
+            self._recorder.caller(mulaw)
+
+    def _record_model(self, mulaw: bytes) -> None:
+        """Hand the model leg's bytes to the recorder, if one is attached.
+
+        Called BEFORE send_media, so the file holds every chunk the bridge
+        produced even if the socket is already closed and drops it.
+        """
+        if self._recorder is not None:
+            self._recorder.model(mulaw)
 
     def close(self) -> None:
         """Teardown flush (Q10): recover each direction's stranded tail.
@@ -218,9 +246,15 @@ class BridgeSession:
         event name: a forward happened, and the offline gap analysis has no
         reason to treat the last chunk of a call differently from any other. An
         empty flush is the Q9 no-op again -- nothing sent, nothing recorded.
+
+        The recorder closes AFTER both flushes, so the model file carries the
+        recovered tail of the AI's final utterance. It never raises (see
+        `CallRecorder.close`), so it cannot change this call's ending reason.
         """
         self._forward_to_gemini(self._inbound.push(b"", last=True))
         self._forward_to_twilio(self._outbound.push(b"", last=True))
+        if self._recorder is not None:
+            self._recorder.close()
 
 
 __all__ = [

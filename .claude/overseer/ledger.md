@@ -19,6 +19,432 @@ Categories follow Trajectory-Informed Memory Generation (arXiv 2603.10600):
 - **optimization** — inefficient pattern worth flagging next time
 - **none** — routine entry, no pattern of note
 
+## 2026-09-12T08:00:00Z — architecture — ADR-0001 FALSIFIER RESOLVED (browser read)
+- Trigger: owner asked for the one thing that unblocks ratification -- read the Vertex
+  supported-locations table in a browser, since the doc fetcher returns navigation shells
+- Evidence: model page `.../models/gemini/2-5-flash-live-api` ("Supported regions"); Data
+  residency page (verbatim UK-exclusion note); Deployments-and-endpoints page multi-region
+  table (read visually, checkmarks are not in the text layer)
+- Action: resolved the falsifier in `docs/adr/0001-caller-data-residency.md`. The answer
+  CHANGED the decision. Corrected option B's stale "indications are / if true" wording.
+- Category: strategy
+
+### The answer, and it is not the comfortable one
+1. **The Live model is NOT served in `europe-west2`.** Verbatim from the model's own page:
+   Europe = europe-central2, europe-north1, europe-southwest1, europe-west1, europe-west4,
+   europe-west8. Six regions; London is not one. Plain text, not an inferred checkmark.
+2. **The EU multi-region endpoint EXPLICITLY EXCLUDES THE UK.** Verbatim: "Geographies
+   outside the European Union political boundary, including the United Kingdom and
+   Switzerland, are excluded from this endpoint." This was not anticipated by anyone and it
+   is the finding that matters most -- post-Brexit, the EU multi-region is the wrong
+   instrument for a UK product.
+3. **The residency table gives this model no UK commitment.** Read visually: the Live row
+   has ticks in the first two columns only and is blank across every country column, UK
+   included, while `gemini-2.5-flash` below it is ticked across. The blank is meaningful.
+4. **Locational endpoints DO meet GDPR** -- verbatim, and it softens the endpoints page's
+   "endpoints don't guarantee residency" callout. So a locational endpoint in a SERVED EU
+   region gives in-jurisdiction ML processing.
+
+**Consequence: option B/C buys EU jurisdiction, NOT UK.** UK in-country processing of the
+audio leg is unavailable by either route. The owner's leaning was reasonable and is wrong
+about what it purchases -- which is exactly why this was worth reading rather than assuming.
+If the product claims "UK-hosted", that is now a product/marketing decision.
+
+### A discrepancy between two Google pages, flagged NOT resolved
+The Deployments-and-endpoints multi-region table shows the Live model with NO US/EU
+multi-region availability; the Data residency table shows it WITH both. The two disagree. A
+plausible reading is endpoint-invocability vs ML-processing-commitment, but that is a GUESS
+and the ADR says so. It does not affect the conclusion -- both agree the UK column is empty
+and the model page independently excludes `europe-west2`. Recorded so nobody later
+"resolves" it by picking the table that suits them.
+
+### Two incidental findings worth having
+- `gemini-live-2.5-flash-native-audio` has a **retirement date of 2026-12-13**. Both profiles
+  pin it. Nothing in the repo recorded that it is a dated dependency.
+- The model caps a session at **10 minutes by default** ("can be extended"), independent of
+  the Cloud Run 3600 s request timeout. Fine for scripted S7 calls; relevant the first time a
+  real caller talks longer.
+
+## 2026-09-12T07:00:00Z — architecture — ADR-0001 DRAFTED (residency), gates S7
+- Trigger: owner instruction to record caller-data residency as an open architectural
+  decision, gating S7 rather than S6
+- Evidence: `docs/adr/0001-caller-data-residency.md`; gate placed in `docs/deploy.md`
+  steps 6d/6e AND in `vertical-profile-bridge.md` row 7b
+- Action: drafted the ADR as PROPOSED, owner-ratification-pending. Pinned
+  `SERVICE_NAME=decana-voice`. Did NOT migrate to Vertex -- explicit owner instruction.
+- Category: strategy
+
+### The ADR found a THIRD leg the framing did not include
+The residency question was raised about Gemini. Walking every hop the caller's data takes
+found five, and hop 3 was not in anyone's framing: **the operator email's body IS the brief**
+(`dispatch.py:122` renders it via `render_brief`), and the brief contains
+`analysis.summary` -- a summary of what the caller said. So the SMTP provider choice is part
+of this decision, not separate from it, and a US-hosted relay would reintroduce the exact
+problem through a door nobody was watching. That matters right now because the owner is
+mid-way through asking which SMTP provider to use.
+
+Hop 5 (`DECANA_ARTIFACT_DIR`, the transcript/brief files on instance disk) is already
+correct as a side effect of the `europe-west2` pin -- London.
+
+### Option B's cost is larger than "change the client construction"
+Enumerated in the ADR, because the owner's leaning is B/C and the cost should be visible
+before ratification, not after:
+- Vertex authenticates via ADC/service account, not an API key -- so `Settings.gemini_api_key`
+  (currently REQUIRED, exit 2 if absent) changes shape, and S6's Secret Manager wiring with it.
+- Both profiles' `live_model` change: Vertex's native-audio Live model is named differently
+  from `gemini-2.5-flash-native-audio-preview-12-2025`.
+- **It re-opens S2's and S3's latency premises under Article 8.** The 3229 ms and 3128 ms
+  measurements were taken against the Developer API; a different endpoint plus a possible
+  cross-region hop invalidates both as evidence for A3's <=3000 ms bound -- and A3 is what
+  the feature is judged on.
+- It interacts with the `europe-west2` pin, possibly collapsing B into C (new URL, Twilio
+  re-point) -- cheap now, expensive after S7.
+
+### The falsifier is named and the ADR must not be ratified without it
+Whether Vertex's native-audio Live model serves `europe-west2` is ASSUMED, not verified --
+the Vertex locations and Live reference pages return navigation shells to a fetcher. The ADR
+says so in its own body and names the resolution: read the supported-locations table in a
+BROWSER. That single reading decides whether B collapses into C.
+
+### Gate placement, per the lesson from S5's Phase 5
+The gate is written into `vertical-profile-bridge.md` row 7b as well as the deploy doc,
+because S7 is explicitly "not routed through slice-planner/slice-builder" -- a gate recorded
+only where the agent looks is a gate recorded nowhere. Same failure a critic caught when this
+session ASSERTED an S7 handoff it had never made.
+
+## 2026-09-12T06:00:00Z — deploy (S6) — REGION_PINNED europe-west2
+- Trigger: owner asked to verify Gemini Live proximity before pinning, since the region
+  fixes the service URL and re-pointing Twilio is the cost of a wrong choice
+- Evidence: `gemini/live.py:356`, `analysis/gemini_client.py:34` (both
+  `genai.Client(api_key=...)`, no vertexai/location); grep of `src/`+`scripts/` for any
+  region parameter -> none; https://ai.google.dev/gemini-api/docs/available-regions
+- Action: pinned `europe-west2` in `docs/deploy.md`. Recorded the residency flag separately.
+- Category: strategy
+
+### The premise did not hold, and that IS the finding
+The worry was that a London Cloud Run region could add a per-chunk round-trip to Gemini and
+lose more than Twilio proximity gains. Correct question; it does not bind here.
+
+**This project is on the Gemini DEVELOPER API, not Vertex AI.** There is no region parameter
+to set — and the Developer API's "available regions" page is COUNTRY ELIGIBILITY, not a list
+of selectable serving endpoints. `generativelanguage.googleapis.com` is one global endpoint
+reached via Google's edge, so **Cloud Run region does not select a Gemini serving location**
+and the latency-critical leg is region-independent. The tiebreak therefore falls to the
+one-time Twilio setup leg, which favours London.
+
+### Confidence levels, kept separate on purpose
+- **VERIFIED** (code + primary doc): Developer API in use, no region parameter exists,
+  "available regions" is eligibility not endpoints.
+- **ASSUMED, not verified**: that Vertex's native-audio Live API serves `europe-west1`/
+  `west4`/`north1` and NOT `europe-west2`. The Vertex locations and Live reference pages
+  return navigation shells to a fetcher; this came from a search summary and a dev-forum
+  thread, not a quoted table. Falsifier named in the doc: read the table in a browser.
+  Flagged because IF a Vertex migration happens, `europe-west1` probably wins and switching
+  later costs a new URL plus a Twilio re-point.
+
+### Raised, not settled: transcripts have no region control
+The global endpoint means nothing constrains where UK callers' transcripts are processed.
+This is a regulated context by the feature's own design (`disclosure.md`,
+`compliance_notes`), so the mismatch deserves a deliberate decision. Not S6-blocking, not
+the agent's call, and harder to reverse once real client calls exist — so it is on the
+record before the first real call. Vertex AI with an EU region is the lever if the answer
+is "unacceptable".
+
+## 2026-09-12T05:00:00Z — deploy (S6) — DOCS_AND_DOCKERFILE_WRITTEN
+- Trigger: owner request for `docs/deploy.md` before provisioning GCP credentials
+- Evidence: `docs/deploy.md`, `Dockerfile`, `.dockerignore`, `.claude/settings.json` (+2 ask
+  entries). Install method and every gcloud flag verified against current docs, not memory.
+- Action: wrote S6's non-credential deliverables. Owner runs every command; agent ran none.
+- Category: strategy
+
+### Contract confirmed before writing, as asked
+Edge S3 -> S6 verbatim: Cloud Run, `min-instances=1`, `max-instances=1`,
+`--session-affinity`, timeout >= 3600 s, secrets from Secret Manager into env,
+`PUBLIC_WSS_URL = wss://<service-url>`, webhook -> `https://<service-url>/voice`. Nothing in
+the contract contradicts "the Ubuntu box is only where gcloud runs from".
+
+### The Dockerfile was MISSING and is also an S6 deliverable
+The owner asked only for the doc. But S6's deliverables are `Dockerfile`,
+`cloudrun.yaml`/deploy script AND `docs/deploy.md`, and Order row 4's gate literally opens
+"Dockerfile builds". No Dockerfile existed. A deploy guide whose build step referenced
+nothing would have been the same "asserting a handoff that never landed" failure caught in
+S5's Phase 5. Written, with `.dockerignore`.
+
+### Verified against current docs rather than recalled
+- The canonical install host has MOVED: `cloud.google.com/sdk/docs/install` 301s to
+  `docs.cloud.google.com/sdk/docs/install`. `apt-key` is deprecated; current method is
+  `gpg --dearmor` to a keyring plus `signed-by`. Package: `google-cloud-cli`.
+- Flags confirmed spelled `--min-instances` / `--max-instances` (not `--min`/`--max`),
+  `--session-affinity`, `--timeout`, `--set-secrets ENV=SECRET:VERSION`, `--set-env-vars`,
+  `--allow-unauthenticated`, `--source`.
+- **A WebSocket IS an HTTP request to Cloud Run and is subject to the request timeout** —
+  default 300 s, documented maximum 3600 s. The contract's ">= 3600" is therefore exactly
+  the ceiling, not a loose lower bound. A call is cut at the timeout whatever the app does.
+- Four APIs needed: `run`, `secretmanager`, `cloudbuild`, `artifactregistry` — the last two
+  because a source deploy builds via Cloud Build and stores images in an auto-created
+  `cloud-run-source-deploy` repo, which accrues storage cost per deploy.
+
+### Cross-checked the doc against the code it describes
+The 8 `gcloud secrets create` names in the doc are EXACTLY the 8 credentials
+`Settings.from_env` reads — diffed programmatically, not eyeballed. Also confirmed: `PORT`
+is read and never hardcoded; uvicorn already binds `0.0.0.0` (a localhost bind would have
+failed on Cloud Run); `f"{public_wss_url}/media"` at `server.py:228` is what makes the
+no-trailing-slash warning real.
+
+### `gcloud` added to ASK, not allow
+Two entries (`Bash(gcloud:*)`, `Bash(gcloud)`) beside `docker push:*`. Ask rather than allow
+was the owner's explicit instruction: every gcloud call should be a deliberate prompt, not
+swept up by the generic unclassified-command catch. `allow` contains a bare `Bash`, so
+without an ask entry gcloud would have run unprompted.
+
+### Open for the owner — two values the doc needs and I did not invent
+`<GCP_REGION>` (step 2b) and `<SMTP_HOST>`/`<SMTP_PORT>` (step 3). Left as marked
+placeholders rather than guessed; the owner said they would supply them on request.
+
+## 2026-09-12T04:00:00Z — dispatch (S5) — CROSS_SLICE_VOCABULARY_CHECK
+- Trigger: owner request after the smoke exposed that 314 unit tests ran against a
+  fabricated outcome vocabulary
+- Evidence: grep over `src/` and `scripts/`; `analyse.py:70` and `:114`; both shipped
+  `profile.toml` + `analysis.md` pairs; `smoke_dispatch.py` run against BOTH profiles
+- Action: checked, then PROVED. **No contract mismatch exists.** Fixed the one real
+  brittleness found, in this session's own smoke script.
+- Category: strategy
+
+### The result: the vocabulary is read from the profile everywhere, by every consumer
+- **`src/` hardcodes ZERO shipped category names.** Verified by grep for all seven
+  (`new_client`, `not_qualified`, `callback_requested`, `existing_client`, `survey_booked`,
+  `not_eligible`, `info_only`). The only hits were in this session's own smoke script.
+- **S3 references `outcome` zero times** — correct, it runs before any analysis exists.
+- **S4 builds the enum from the profile**: `{"enum": [*profile.outcomes, UNCLASSIFIED]}`
+  (`analyse.py:70`), and downgrades anything outside that set to `unclassified`
+  (`analyse.py:114`). A profile-specific category can never reach S5 unrecognised.
+- **S5 consumes it three ways**, all profile-derived: `profile.sms.get(analysis.outcome)`
+  (a missing key is a deliberate skip), the brief body, the email subject.
+- **Prompt and schema AGREE for both profiles.** Each `analysis.md` enumerates exactly its
+  own `outcomes.allowed` four, and each explicitly instructs `unclassified` as the fallback.
+  This was the likeliest mismatch — a prompt naming categories the schema forbids — and it
+  is not present.
+
+### Proved, not asserted: the smoke now runs against BOTH shipped profiles
+The smoke hardcoded `load_profile("mortgage-broker")` AND a matching outcome literal, so it
+could only ever prove the broker path. Now it reads `DECANA_PROFILE` and DERIVES an outcome
+that actually has an SMS template. Result: **13/13 assertions pass for `mortgage-broker` AND
+for `eco-consultant`, with no code change — an env var only.** That is A4's ratified property
+("`git diff --stat` touches `profiles/` only") demonstrated for S5 ahead of S7, and it also
+exercised the eco profile's TWO-link template, where the broker's carries one.
+
+### One property worth stating because it is silent
+`unclassified` can never carry an SMS template: S1 rejects it inside `outcomes`, and
+`profile.sms` keys must be a subset of `outcomes`. So a call whose analysis failed sends no
+SMS, ever. That is correct — you do not text a prospect about a call you could not classify —
+but it means an analysis failure degrades to email-only, reported via D4.a's skip line in the
+brief. Not a defect; a consequence nobody had written down.
+
+## 2026-09-12T03:00:00Z — dispatch (S5) — SLICE_TESTS_COMPLETE
+- Trigger: none (routine; logged, not escalated)
+- Evidence: `check_ids.py` reports `dispatch OK 54 ids, 54 covered`, clean BOTH directions.
+  Suite 260 -> 314. `ruff`/`ruff format`/`mypy --strict src scripts tests` clean (46 files).
+  `scripts/smoke_dispatch.py` TIER 1 PASSED, 13/13 assertions; tiers 2/3 PARKED.
+- Action: built all of S5 -- `src/decana/dispatch/{__init__,errors,model,brief,senders,dispatch,wiring}.py`
+  (662 LOC), `Settings` +7 optional fields +2 group predicates, `build_on_call_end` MOVED out of
+  `twilio/server.py` per Q24, `__main__.py` call site updated, `analyse.py.__all__` +render_transcript,
+  `pyproject.toml` +twilio mypy override.
+- **Mutation evidence: 42 mutations, 42 KILLED.** Tree verified free of residue after every run.
+- Category: strategy
+
+### Three mutations SURVIVED first, and every one was a hole in the TEST, not the code
+This is the entry's real content. All three were found by mutation, none by reading.
+
+1. **`D1.a` (to_thread) SURVIVED.** The test asserted `ticks > 0` after the sender began
+   blocking -- but the ticker gets one tick in BEFORE the block starts, so the assertion held
+   under a direct call too. Rewritten to a binary with no threshold to tune: the sender waits
+   on an event that only a coroutine can set, so `released is True` is reachable ONLY if the
+   loop kept running. KILLED after.
+2. **`D22.c` (UTF-8 encoding) SURVIVED**, because the dev box's locale is already UTF-8, so a
+   bare `write_text` behaves identically. `io.text_encoding` turned out to be the hook --
+   patched to `"ascii"` it makes a bare write raise while an explicit `encoding=` passes
+   through. First attempt at that patch was itself wrong: `pathlib.write_text` calls
+   `io.text_encoding(encoding)` UNCONDITIONALLY, so a lambda ignoring its argument overrode
+   the explicit `"utf-8"` too and proved nothing. KILLED after honouring the argument.
+3. **`D8.a` (failed vs skipped) SURVIVED.** Its test drove `render_brief` with HAND-BUILT
+   outcomes, so it never exercised `dispatch`'s conversion of a real failure -- "a fake cannot
+   be evidence for the contract the fake implements", exactly. Extended to assert the brief
+   text on the path where `dispatch` COMPUTES the outcome. KILLED after.
+
+### Two defects the tests caught in the implementation
+- **Q18's boundary, violated by me.** I computed the email body OUTSIDE the email stage's
+  wrapper, so a `render_brief` failure escaped `dispatch` instead of being attributed to the
+  `email:` stage. `D14.a` failed and named it. Q18 predicted this exact defect at plan time.
+- **Q17's guard, missing entirely.** `post_call` had no `try/except`, so a failing
+  `artifact_dir.mkdir` propagated into S3's teardown. `D10.a` failed and named it.
+
+### What the smoke found that no fake could
+The unit suite uses a FABRICATED profile. The real `mortgage-broker` profile's vocabulary is
+`new_client`/`not_qualified`/`callback_requested`/`existing_client`, with an SMS template for
+`new_client` only. The smoke's first run used `qualified_lead` -- not in the vocabulary -- so
+the gate correctly skipped and the smoke reported a missing marker. Nothing in 314 unit tests
+meets the shipped vocabulary; the smoke is the only place the two ever touch.
+
+## 2026-09-12T01:00:00Z — dispatch (S5) — UNIT_COMPLETE (brief.py)
+- Trigger: none (routine unit; logged, not escalated)
+- Evidence: tests/test_dispatch.py 17 nodes; suite 260 -> 277; check_ids reports
+  `dispatch DIRTY 54 ids, 14 covered` (registration landed, so it now checks rather than SKIPs)
+- Action: built `src/decana/dispatch/{__init__,errors,model,brief}.py`. 14 ids green:
+  D3.a/b, D8.a, D19.a/b/c, D20.a-d, D21.a-d. **10 mutations run, 10 KILLED** — incl. the
+  prefix-parsing renderer (only the adversarial skipped-detail fixture catches it) and the
+  two-line-difference mutant. Tree verified free of mutant residue after every run.
+- Deviation recorded: `render_brief` was implemented in full to satisfy its FIRST behavior,
+  so 13 of 17 tests passed on arrival. The mutation runs are the evidence, not the suite.
+- Category: strategy
+
+## 2026-09-12T00:00:00Z — dispatch (S5) — PLANNING_COMPLETE
+- Trigger: /plan-slice command
+- Evidence: .claude/overseer/slice/dispatch.md (1180 lines); spike
+  .claude/artifacts/spikes/dispatch-sdk-surfaces-2026-09-12.json; escalations.md 2026-09-12 x2
+- Action: planning artifact written. 24 decisions, 23 hardest seams, 54 ratified behavior ids,
+  54 mutation entries (one per id, not one per seam), 4-part exit criterion, 7 deferrals.
+  Rounds: Phase 2 x9, Phase 3 x5, Phase 4 x6, Phase 5 x5, cold read x9 — all converged to
+  CRITIC_PASS. 2 owner escalations, both resolved same-session.
+- Category: strategy
+
+### What the rounds actually cost and bought
+Every round found a real defect. Two classes dominated, and they failed differently:
+
+**Round-anchored rounds (25 total) found FLAWS in contested surfaces.** Their signature
+failure was the INCOMPLETE REPAIR: eight times, the fix for one round's defect left a stale
+sibling site. Q17 after Q10-A; Phase 4 §2's count after Seams 14-18 were added; Q19's prefix
+convention; Q11's stale `SendOutcome(ok=False, ...)` after `ok` was removed; Seam 15's
+polarity after Q23 reversed it (which left `D15.b` and `D15.e` MUTUALLY EXCLUSIVE for the
+same input); a retired id still cited in the exit criterion; Q22's scope clause after Q24
+moved a file. Three of the eight were found by the same move — after changing a shared
+thing, ENUMERATE ITS SITES — not by re-reading the section that changed.
+
+**The cold read found OMISSIONS, and only it could.** Nine cold passes; the first four each
+found something no round-anchored round could reach, because no round had opened the surface:
+1. `Analysis.summary` — ratified in the feature contract with the comment "for the brief" —
+   and `compliance_notes`, the feature's ONLY post-call compliance channel, were rendered
+   NOWHERE. Zero decisions, zero seams, zero ids. The brief would have told an operator
+   "Transcript file: written. SMS: sent." and never what the caller wanted. Fifteen prior
+   round-anchored rounds passed over it.
+2. The header block that repair 1 itself introduced, plus both senders' call arguments.
+3. `transcript.txt`'s CONTENT was undecided — `str(record.transcript)`, a tuple repr, passed
+   every id in the artifact — plus `email_sent` and file encoding.
+4. The seven-field credential predicate was undefined; the natural `if all(seven)` gate would
+   have DISABLED THE OPERATOR'S EMAIL whenever an unrelated Twilio credential was missing.
+7. Pinning `build_on_call_end`'s signature exposed that the ratified design has S3 importing
+   S4/S5, which Edge S3 forbids in terms. Resolved by moving the function to
+   `dispatch/wiring.py` (Q24), overruling S3's placement note — which PROGRESS.md explicitly
+   records as overrulable. It also caught that `__main__.py` had to change and was named in
+   NEITHER scope list.
+
+This is the `Interrupted` precedent repeating: a high round count is evidence FOR the cold
+read, not against it.
+
+### Defects found in ratified text and in the repo, not just in the plan
+- **`twilio` was never a dependency.** The ratified contract specifies `TwilioSmsSender` over
+  `twilio.rest.Client`; the package was absent from `pyproject.toml` and uninstalled.
+- **P2 FALSIFIED:** `MessageInstance.sid` is `Optional[str]` (SDK source `message/__init__.py:119`),
+  not the `-> str` the contract types. Set in `__init__` from the payload, so absent from
+  `dir()` entirely.
+- **P3 FALSIFIED:** `twilio` ships no `py.typed`; `mypy --strict` emits TWO errors, and
+  `ignore_missing_imports` alone fixes only one.
+- **`scripts/check_ids.py` covers 2 of 4 slices**, and its SKIP branch `continue`s without
+  setting `dirty` — so an unregistered slice exits 0 having checked nothing. `PROGRESS.md`
+  claimed it covered "every slice"; corrected.
+- **`scripts/supervise.sh` does not exist on this branch** though `CLAUDE.md:163` names it as
+  the layer that exports secrets. Flagged for the owner, not fixed (harness tooling).
+- **S7 step 7b destroys 7a's evidence.** Two redeploys of a `max-instances=1` service sit
+  between the broker calls and any look-back, and S5's artifacts live on instance disk. The
+  sequencing requirement was PLACED in the feature doc's row 7b and Edge S7 — the document
+  S7's executor actually opens — after a critic caught the plan ASSERTING a handoff that had
+  never been made.
+
+### Owner escalations (both on the named escalate list: ratified artifact text / product)
+- PRODUCT_DECISION: SMS marker order -> mark-before-send (at-most-once).
+- ADR_RATIFICATION: guarantee (d)'s silence on the file writes -> read as a FLOOR; `dispatch`
+  wraps all five effects and never raises. Guarantee (d) amended in place and tagged.
+  Raised by the critic against the planner's own MISQUOTATION of that guarantee: "nothing
+  raises" is the tail of a clause scoped to SMS/email, quoted as if unscoped. The conclusion
+  survived; the argument did not.
+
+## 2026-08-27T12:00:00Z — twilio-server — UNIT_COMPLETE (media block)
+- Trigger: owner directed "run S1.b, S1.c, S11, S16 and S7 straight through"; report once.
+- Evidence: 14 ids green (`S1.a-c`, `S6.a-c`, `S7.a`x6, `S11.a-c`, `S16.a-c`), suite 196 passed, `ruff` clean, `mypy --strict src scripts tests` clean over 25 files. Mutation results: bare dict write in `_register` killed by S16.a/S16.c; caller passthrough killed by S7.a[anonymous]/[unknown]/[Restricted Caller ID]; open-session-on-the-fly killed by S11.a/b/c. **Sweep-before-pop SURVIVED all 18 nodes** — expected, S8.a is its named closer and is not yet written.
+- Action: `WS /media` implemented — accept, dispatch, adopt pop-before-sweep, real `BridgeSession` with real resamplers and `TimingRecorder`, single teardown; `connected`/`mark`/`dtmf` deliberate no-ops. **Two harness defects found and fixed, both recorded in MEMORY.md as one pattern:** the mutation runner hit a 2-minute timeout and left `server.py` carrying a mutant (caught only by a hand-taken checksum), and three S11 tests failed by *hanging* rather than failing because they waited on a socket close with no timeout — `pytest-timeout` added, bounded at 10s, mutant now dies in 31s with three clean failures. Deps added beyond the pre-approved set: `python-multipart` (Twilio's form-encoded webhook, found by the first GREEN attempt), `pytest-timeout` (dev).
+- Category: none
+
+## 2026-08-27T21:40:00Z — analysis (S4) — SLICE_TESTS_COMPLETE
+- Trigger: work loop; the S4 plan was ratified after 2 critic rounds and six cold-read passes, and built immediately after.
+- Evidence: **all 22 ratified ids green**, verified by the exit criterion's own bidirectional diff (every id has a node; no node lacks an id). Suite **260 passed**; `ruff` and `mypy --strict src scripts tests` clean over 36 files. **Seven mutations, all killed via `scripts/mutate_check.py`:** `except BaseException` (killed by A4.f alone — the node the eighth cold-read finding added); the sync SDK facade (A7.c); a dropped `api_key` (A7.d); `profile.live_model` for `analysis_model` (A1.c); `compliance_notes` passthrough (A1.e + A5.c); `summary="failed"` on every failure branch (killed by all **8** failure-path nodes, including A4.a — direct evidence the seventh finding's repair reached the sibling it had originally skipped); and no summary truncation (A6.a).
+- Action: `src/decana/analysis/{model,analyse,gemini_client}.py` built. **One real defect found by my own test during the build:** a non-string `outcome` was falling through the out-of-vocabulary path, so its summary came from the payload rather than naming a wrong shape — the ratified `A4.e` says a non-string outcome IS a wrong shape, so the implementation was corrected rather than the test. `scripts/smoke_analysis.py` written; PARKED on `GEMINI_API_KEY`, spending budget before any socket opens.
+- Category: none
+
+## 2026-08-27T21:10:00Z — analysis (S4) — COLD_READ_PASS_5_FINDING
+- Trigger: fifth cold read — verify the `summary`-content fix and decide whether the plan is ready to build.
+- Evidence: the pass confirmed the fix closes the degenerate `summary="failed"` swallow at all four nodes it used to pass, and that the assertions tie each summary to semantic content rather than to arbitrary-but-different placeholders, which a pairwise-inequality check would not. It also named and rejected three candidate eighth instances (the `timeout_s` default, the smoke's park behaviour inherited from S2/S3, and Seam 7(a)'s loose id mapping).
+- Action: **a seventh finding, and a new sub-class — an incomplete repair.** Seam 4 enumerates five failure modes; the previous round added `summary` assertions to four and skipped the empty-transcript one, so a `summary=""` there would have passed all 24 nodes while violating the very guarantee that round was convened to enforce. The first six findings were coverage that never existed; this one was introduced BY the repair. Fixed Seam 4(a) and `A4.a`, and corrected the "four reasons must be distinguishable" language to five. Rule folded into MEMORY.md: when a fix applies to a family, apply it to the whole family and then count the family — the skipped sibling is the one nobody revisits, because the area now reads as recently handled.
+- Category: recovery
+
+## 2026-08-27T20:55:00Z — analysis (S4) — COLD_READ_PASS_4_FINDING
+- Trigger: fourth cold read, scoped to one question — is there a surface the enumeration itself does not name, and should the loop stop?
+- Evidence: the pass explicitly CLEARED five candidate surfaces with reasons (module layout — an import error surfaces at collection, so it cannot ship silently; mutation/idempotency — `TranscriptTurn` is frozen and `CallRecord.transcript` is a tuple, so there is no mutable state to corrupt; `Sequence` vs `Iterable` already rules out single-consumption; untouched `Profile` fields have no confusion path) and found one.
+- Action: **`summary`'s CONTENT on the failure paths had no seam and no id — and it is the justification S4-Q7 rests on.** The ratified contract says every failure yields `summary="<reason>"`; S4-Q4 says the timeout reason goes there; and S4-Q7 defends catching `Exception` rather than a narrow type list on the grounds that "the `summary` carries the exception type, so a bug in our own code is visible rather than swallowed". Nothing tested it: a hardcoded `summary="failed"` on every branch passes all 24 nodes, falsifies the guarantee, and turns S4-Q7's broad catch into an actual swallow. Fixed by extending Seam 4(b)-(e) and the matching ids to assert that `summary` names the failure mode AND that the four reasons are distinguishable from each other — a field that says something failed without saying what is the same as absent when the only artifact is a week-old record. Node count unchanged at 24; the assertions strengthen existing nodes rather than adding any.
+- Category: recovery
+
+## 2026-08-27T20:35:00Z — analysis (S4) — COLD_READ_PASS_3_FINDING
+- Trigger: third cold read, scoped to one question — is the (decision, seam, id) triad complete over the WHOLE ratified surface, answered by enumeration.
+- Evidence: the enumeration returned 3/3 on fifteen surfaces and **0/3 on one**: `GeminiAnalysisClient.__init__`'s `api_key`. Verified in SDK source and by execution — `google/genai/_api_client.py:128-140` defines `get_env_api_key()`, which reads `GOOGLE_API_KEY` then `GEMINI_API_KEY` when no key is passed, and `genai.Client()` with no argument constructs successfully whenever either is set.
+- Action: **the most severe of the five defects found in this artifact, because it is silent in every environment the project actually runs in.** An implementation that drops the argument — `genai.Client()` — passes the unit suite, passes the real-API smoke, and passes production, since `GEMINI_API_KEY` is exactly the secret the deploy contract (Edge S3 → S6) injects into the Cloud Run process env and exactly what a developer exports locally. Contrast S4-Q9 (a blocking facade eventually shows as latency) and S4-Q11 (a wrong model produces observably poor output); this one never reveals itself. The artifact had *claimed* the property in prose — "it takes `api_key` as an argument — it never reads an env var" — with nothing behind it. Fixed as S4-Q12 with Seam 7(c) (patch the `google.genai.Client` class, assert the forwarded kwarg, no network and no environment dependence) and id `A7.d`; the fix was verified testable before being ratified. A non-blocking note closed in the same pass: `A1.e` had an id but no seam bullet, now Seam 1(e). **Five passes, five instances of one pattern**: a ratified thing with fewer than all three of decision, seam, id — and every one was found by enumeration, never by re-reading.
+- Category: recovery
+
+## 2026-08-27T20:10:00Z — analysis (S4) — COLD_READ_PASS_2_FINDING
+- Trigger: second cold read over the assembled artifact.
+- Evidence: `.claude/overseer/slice/analysis.md`, now 20 ids / 23 nodes, 11 decisions. The cold reader confirmed S4-Q10's rule is total over every JSON shape `compliance_notes` can take (absent, empty list, list of strings, list of non-strings, bare string, dict, null, scalar) with no contradiction against S4-Q7 — Q7 commits to the RESULT, Q10 supplies the MECHANISM.
+- Action: **the same defect pattern found a third time in this artifact, on `model` — and this time it was zero-of-three, not two.** `AnalysisClient.generate_json` takes a `model` kwarg and `Profile` carries both `analysis_model` and `live_model`, two `str` fields one attribute apart. Nothing named which one to pass, nothing tested it, and passing the wrong one produces a **working call against the wrong model** — a conversational model doing structured analysis — with no error anywhere. Fixed as S4-Q11 with Seam 1(c) (the fixture's two model names deliberately differ, so the assertion is sharp rather than incidental) and id `A1.c`. Two non-blocking notes closed in the same pass: the schema `analyse` BUILDS now constrains the array's `items` (Seam 1(d)/`A1.d`) — distinct from what `GeminiAnalysisClient` forwards, which Seam 7 covers — and a pure happy-path id `A1.e` was added, since no single node had asserted in-vocabulary outcome, non-empty notes and populated `raw` together on one well-formed response.
+- Category: recovery
+
+## 2026-08-27T19:45:00Z — infrastructure — BUDGET_FAILS_CLOSED
+- Trigger: exercising `scripts/_budget.py` rather than reading it; the module had no test and the loop depends on it.
+- Evidence: four shapes driven directly — missing file, corrupt JSON, valid JSON that is not an object, stale date. Before the fix a corrupt file was caught alongside a missing one and reset the count to zero.
+- Action: **the cost cap failed OPEN on corruption, which removes the cap entirely.** For a spending guard that is backwards: the cap exists because nobody is watching, so an unknown count must mean "no". Missing file (first run) still spends freely; a corrupt one refuses and prints why, because a silent refusal reads as a normal cap and nobody repairs the file. The asymmetry is deliberate — one parked smoke is cheap, an uncapped crash-loop against a paid API is not.
+- Category: recovery
+
+## 2026-08-27T19:25:00Z — analysis (S4) — COLD_READ_FINDING
+- Trigger: first cold read over the assembled artifact.
+- Evidence: `.claude/overseer/slice/analysis.md`, now 17 ids / 20 nodes. The cold reader tool-verified every SDK claim independently (`types.py:6546,11469` for the prompt-must-ask-for-JSON caveat; `errors.py:46,294,299` for the `APIError` hierarchy; live `inspect.iscoroutinefunction` for the sync/async split) — all held.
+- Action: **the same defect shape recurred inside one artifact, and the memory entry written earlier today predicted it.** `Analysis.compliance_notes` had a ratified type member and a seam whose TITLE claimed to cover it, but no decision naming the success-path mechanism and no id exercising one; its sole assertion sat on the failure path asserting that a hardcoded `()` is a tuple — which a passthrough shipping a mutable `list` inside a frozen dataclass satisfies equally. Fixed as S4-Q10 (coerce a list's items; a bare string is a wrong shape, since iterating one yields a note per character), Seam 5 rewritten to lead with the success path, ids `A5.c`/`A5.d` added, `A5.b` narrowed to what it actually asserts, Seam 7(a) extended to check the schema declares the array. **Two sharpenings folded into MEMORY.md:** a seam's title is not coverage, and an assertion on a value the implementation hardcodes proves nothing — it must sit where the value is computed.
+- Category: recovery
+
+## 2026-08-27T19:00:00Z — analysis (S4) — PLANNING_COLD_READ
+- Trigger: Phase 2 converged after 2 critic rounds; phases 3-5 reviewed in the same round; cold reader now running over the whole artifact.
+- Evidence: `.claude/overseer/slice/analysis.md` — 9 decisions, 7 hardest seams, an 18-node id set with the seam-sub-clause diff clean in both directions (unlike `twilio-server`, which lost four assertions to that same compression).
+- Action: **round 2 found the sharpest defect of this slice, and it was invisible to every fake.** `GeminiAnalysisClient.generate_json` was specified only as "`generate_content` with response_mime_type/response_schema", naming no entry point. Verified by execution: `inspect.iscoroutinefunction(client.models.generate_content)` is **False** and `client.aio.models.generate_content` is **True**. An `async def` wrapping the sync facade has no internal `await`, so (1) `asyncio.wait_for` cannot preempt it and S4-Q4's timeout silently stops working for the only client that matters, and (2) it blocks the event loop that forwards audio for every concurrent call — dead air on other people's calls, the cross-call harm S3's fifth coverage axis exists to track. **No fake could catch it**: a fake `AnalysisClient` is `async def ... await asyncio.sleep(...)`, which suspends correctly, so every timeout seam passes either way. Fixed as S4-Q9 with Seam 7(b) (AsyncMock on `.aio.models.generate_content`, assert awaited) and id `A7.c`. Also corrected a false coverage-map row that folded "invalid-outcome" into Seam 4, whose five cases do not include it — it is Seam 1(b).
+- Category: strategy
+
+## 2026-08-27T18:20:00Z — analysis (S4) — PLANNING_IN_FLIGHT
+- Trigger: work loop step 2 — S3's ids exhausted, so the next unbuilt DAG node was taken. S6 was skipped as HUMAN-REQUIRED (Cloud Run credentials); S4 is marked "Owner needed? No" in the ratified Sequence table.
+- Evidence: `.claude/overseer/slice/analysis.md` — all four phases drafted, Phase 2 at critic round 2. Premise P1 (`google-genai` constrained JSON) VERIFIED by reading the installed SDK's source and by executing a `types.Schema(type="STRING", enum=[...])` construction, BEFORE the seam was drafted rather than after — the S2 lesson applied in advance. That reading also surfaced a caveat the docs page omits: *"The model needs to be prompted to output the appropriate response type, otherwise the behavior is undefined"*, which is why S4-Q3 appends the JSON instruction rather than relying on the profile's DRAFT prose.
+- Action: critic round 1 blocked on a real defect — the Errors section claimed `analyse` never raises, and the seams tested it, but **no decision supplied the mechanism**: `asyncio.wait_for` intercepts only `TimeoutError`, so `APIError`/`ClientError`/`ServerError` and JSON parse failures propagated, which is exactly the two branches the ratified contract names most explicitly. Fixed as S4-Q7 (one guarded region around the call AND the parse, catching `Exception` but never `BaseException` so `CancelledError` still propagates) and S4-Q8 (the ratified `summary ≤ 600 chars` asked for in the prompt AND truncated). **Process change made under standing pre-ratification:** planning artifacts are now written incrementally with `<!-- DRAFT: phase N -->` markers rather than only at the end, because the session scratchpad does not survive a session death and a twenty-round plan living only there is the same failure `PROGRESS.md` prevents one level up.
+- Category: strategy
+
+## 2026-08-27T17:30:00Z — twilio-server — SLICE_TESTS_COMPLETE + continuous-operation infrastructure
+- Trigger: continuous unattended run.
+- Evidence: **all 46 ratified ids green**, verified by the exit criterion's own bidirectional diff (every id has a node; no node lacks an id). Suite 235 passed; `ruff` and `mypy --strict src scripts tests` clean over 30 files. Mutations killed via `scripts/mutate_check.py`: LIFO `popitem` lookup and FIFO first-entry lookup (S15), missing root `streamSid` (S5.c), unwrapped `bridge.close()` (S10.a/c), unwrapped `on_call_end` (S4.a/c/d), `call_answered` never recorded (S9.a), real clock instead of injected (S3.d), `load_profile` without `root=` (S17.a), failure-path TwiML opening a stream (S14.a).
+- Action: S3's implementation is complete — `settings.py`, `__main__.py`, `[project.scripts] decana`. **Three corrections to the ratified artifact, each mutation-driven and logged:** Seam 13's named wrong-implementation is void (an `isinstance` elif-chain falls through rather than raising, so the stated falsifier cannot occur; the real defect is the over-reaction and is now verified); Seam 15 needed THREE calls with the middle adopted first, because two calls let LIFO or FIFO survive by luck depending on connect order; S17.a must run from a temp cwd or `load_profile` without `root=` passes by luck from the repo root — W-1's exact failure mode. **`scripts/mutate_check.py` had the defect it exists to prevent**: passing `"file -k name"` as one shell argument made pytest collect nothing and report zero failures, which the script read as SURVIVED. Fixed to `*argv[4:]` and a no-tests-ran run is now reported as proving nothing. **Infrastructure landed:** the work loop (ids exhausted → next DAG node), `scripts/_budget.py` (disk-persisted daily cap on real-API calls, decremented before any socket opens), `scripts/supervise.sh` (restarts across session death; exits after 3 consecutive sessions that leave `PROGRESS.md` unchanged, because a restart loop making no progress hides the stall). **PARKED:** the real-environment smoke needs `GEMINI_API_KEY` in the process environment; `.env` is hard-denied to the agent, so the supervisor exports it.
+- Category: strategy
+
+## 2026-08-27T14:50:00Z — twilio-server — UNIT_COMPLETE (teardown + event routing + outbound drain)
+- Trigger: continuous unattended run; work loop step 1 (finish the current slice).
+- Evidence: 30 of 57 ratified nodes green, suite 212 passed, `ruff` and `mypy --strict src scripts tests` clean over 26 files. Mutations killed, each via `scripts/mutate_check.py`: sweep close-then-pop and bare `del` (both by S8.c); sweep-before-pop (S8.a); missing root `streamSid` (S5.c); `Interrupted` treated as an ending (S13.a+b); transcript role hardcoded to `model` (S13.b); send-failure mislabelled (S3.a[twilio_send_failed]); exactly-once guard removed (S3.a x2).
+- Action: `S3.a` complete across all five ratified endings; `S5.a/b/c`, `S8.a-c`, `S12.a-b`, `S13.a-b` green. **Real defect found by S8.c**: `_sweep_expired` closed before it popped, so two concurrent sweeps both closed the same session — the guarded pop kept the dict consistent but did nothing about the duplicate close. Fixed by making the pop the claim. **Seam 13's named wrong-implementation proved void**: the router is an `isinstance` elif-chain, where a missing arm falls through rather than raising, so the seam's stated falsifier cannot occur — corrected in the artifact, with the real defect (treating a barge-in as an ending) mutation-verified instead. **Three attempts spent** on a hang: teardown triggered from the drain or pump task left the socket open while the main loop blocked on `receive_json`; every teardown path now passes the websocket and closes it.
+- Category: none
+
+## 2026-08-27T12:30:00Z — slice-builder — SKILL_AMENDED (unattended operation)
+- Trigger: owner directed four permanent, non-session-scoped rule changes for 24/7 unattended server operation. Article 7 order followed: proposed in `audit.md`, ratified by that direction, then the skill edited.
+- Evidence: `.claude/overseer/audit.md` 2026-08-27 "Unattended operation" (RATIFIED, 3 ledger citations, 4 accepted risks). Motivating datum: the `twilio-server` planning run produced ~20 chat reports of which exactly one changed an outcome.
+- Action: (1) the ledger and `unattended-decisions.md` are now the reporting channel — chat only for a provisioning blocker, a premise falsifying committed work, an exhausted work list, or the hard-to-undo set; success is never an interrupt. (2) Stops become PARK conditions: log with the unblocker named and route to the next unblocked item; the three-attempt loop guard is unchanged and now parks instead of stopping. (3) `PROGRESS.md` gains a live `## NOW` handoff block updated per unit, written for a cold reader, with "can a fresh instance resume from this alone" as its acceptance test — it previously did not exist in resumable form despite being referenced by overseer check #1. (4) Tree-mutating harnesses must restore in a `finally` and verify the restore, must assert the mutation applied, and must bound anything that can hang.
+- Category: strategy
+
 ## 2026-08-27T09:00:00Z — twilio-server — PLANNING_COMPLETE
 - Trigger: /plan-slice, feature:vertical-profile-bridge S3. Owner present but standing rule in force ("same standing rules as last night — decide and log, don't stop to ask"); one AskUserQuestion raised and answered (Phase 3 convergence).
 - Evidence: `.claude/overseer/slice/twilio-server.md` (1503 lines: 5 premises, 14 decisions, 17 hardest seams with a 5-axis coverage map, a closed 46-id/57-node exit criterion, an executable no-human-oracle smoke, 8 deferred items, 5 watch items, 3 open items). Critic rounds: Phase 2 = 3, Phase 3 = 9 (owner-ruled close), Phase 4 = 3, Phase 5 = 3, cold reader = 2. **17 distinct blocking findings, none reversed.**

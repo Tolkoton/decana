@@ -29,6 +29,22 @@ ADR_RATIFICATION escalation and the human's resolution. Used in the
 
 ---
 
+## 2026-09-12T00:30:00Z — ADR_RATIFICATION — dispatch
+- Question: Ratified Edge S5 guarantee (d) reads "each of SMS/email is wrapped independently; failures land in `errors`, nothing raises" — it wraps the two network effects and is SILENT on the three file writes. Is that silence a floor (dispatch may wrap more) or a ceiling (only those two may be wrapped)?
+- Options offered: (A) floor — dispatch wraps all five effects and never raises, amending guarantee (d)'s text; (B) ceiling — the literal reading stands, a file-write failure propagates out of dispatch and only post_call's guarantee (e) catches it.
+- Recommendation: (A). Under (B) a failed transcript write aborts before SMS, email and brief run, so a real finished call reaches the operator as total silence — contradicting the slice's goal ("turn one finished call into operator-visible output") and Q14 ("the email is ALWAYS attempted"). Under (A) the operator gets an email that names the disk failure.
+- Human chose: (A). Ratified 2026-09-12. `vertical-profile-bridge.md` guarantee (d) amended in place and tagged, following the profile-loader Q12 precedent.
+- Latency to decision: immediate (owner present).
+- Notes: **Raised by the blind critic against the planner's own misquotation.** An earlier draft of Q10 justified the same conclusion by quoting "nothing raises" as if it were an unscoped universal, when it is the tail of a clause scoped to SMS/email. The conclusion survived; the argument did not, and was rewritten to rest on Q14 instead. This is MEMORY.md's lead pattern ("a claim stated more confidently than the world supported") applied to this repo's OWN ratified text, checkable by one grep — the same class as the six checkable claims that were all wrong in the twilio-server session. The critic also caught the incomplete repair: the seam's "Errors:" summary line still stated the pre-reversal model verbatim after Q10's prose had been rewritten.
+
+## 2026-09-12T00:00:00Z — PRODUCT_DECISION — dispatch
+- Question: S5 sends at most one SMS per call. Is the `{call_sid}.sms-sent` marker written BEFORE the Twilio send (at-most-once) or AFTER it (at-least-once)? The order decides which way a crash fails.
+- Options offered: (a) mark-before-send — a crash yields ZERO SMS for that call, never two; (b) send-then-mark — a crash can yield a SECOND SMS to the prospect on retry.
+- Recommendation: (a) mark-before-send. A duplicate SMS to a real prospect is visible and embarrassing and cannot be recalled; a missed one is recoverable, because the brief and the operator email both state the SMS outcome so it can be sent by hand. Matches A2's "not two" over its "not zero", and the feature artifact's own batched recommendation.
+- Human chose: (a) mark-before-send. Ratified 2026-09-12.
+- Latency to decision: immediate (owner present).
+- Notes: This closes the first of the two items batched in the feature artifact's interrupt map. The second (A4 on the same Twilio number vs a second number) belongs to S7 and is NOT closed by this. Implementation consequence: `Path.open("x")` is the guard — create-or-fail, verified atomic in .claude/artifacts/spikes/dispatch-sdk-surfaces-2026-09-12.json (P5) — and a send failure AFTER the marker leaves that call with zero SMS, which must appear in DispatchReport.errors AND in the brief AND in the email.
+
 ## 2026-08-26T00:00:00Z — ADR_RATIFICATION — voice-intake-demo
 - **Question:** An overseer #1 audit found the Exit criterion's unit-suite half names four literal test functions as its proof, and three do not exist: `test_audio_frame_error_resilience` in no form, `test_mulaw_codec_reference_table` and `test_timing_recorder_event_stream_integrity` only as five and four prefixed variants. Seam 4 as built (16 behaviors across `decode_base64_frame`, `start()`, both handlers, `close()`) is also far broader than its name. How should the criterion be reconciled with the 36-test suite?
 - **Options offered:** A) Fold in — replace the four names with the seam labels plus their actual test-name prefixes. B) Rename the 36 tests in code to match the artifact's four names, collapsing each seam into one function. C) other.

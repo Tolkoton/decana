@@ -71,11 +71,42 @@ class Profile:
     analysis_model: str
     """Gemini model id for post-call analysis (S4)."""
 
+    live_voice: str
+    """Prebuilt Gemini Live voice name, e.g. "Kore".
+
+    Without it the model picks a voice per session -- the owner heard a man on
+    one call and a woman on the next (2026-09-13). Vertical data: the voice is
+    part of how a brand answers the phone.
+    """
+
+    live_accent: str
+    """One sentence appended to the call script, e.g. "Speak British English…".
+
+    The accent is prompt text, not a voice parameter, and this is the only
+    knob that reaches it: there is no language field, because native audio
+    models reject or ignore a language code (2.5 closes the socket on it;
+    3.1 ignores it). It was a line inside `conversation.md` until
+    2026-09-13, when an edit to the script dropped it and every call turned
+    American. A required field beside the voice pin cannot be lost that way,
+    and the loader rejects it empty. Owner: "can it be a setting? lets build it".
+    """
+
     phone_number: str
     """E.164 -- the Twilio number this profile answers on."""
 
     sms_sender_id: str
     """Alphanumeric sender id for outbound SMS (S5)."""
+
+    say_voice: str
+    """Twilio TTS voice for the `<Say>` disclosure, e.g. "Polly.Amy-Neural".
+
+    Vertical-specific by nature -- a UK brokerage must not open in an American
+    voice, a German vertical needs a German one -- so it lives here, not in S3.
+    Added 2026-09-13 (owner: "british accent").
+    """
+
+    say_language: str
+    """BCP-47 language for the `<Say>` verb, e.g. "en-GB". Paired with `say_voice`."""
 
     operator_email: str
     """Where the post-call brief is sent (S5)."""

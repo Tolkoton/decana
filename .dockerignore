@@ -1,0 +1,20 @@
+# Keep the build context to what the image actually needs. `gcloud run deploy
+# --source .` uploads this context to Cloud Build, so excluding the agent
+# machinery and the local venv is a real upload-time and cache-hit saving.
+.git/
+.venv/
+.claude/
+hook-checks/
+docs/
+scripts/
+tests/
+**/__pycache__/
+**/*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.md
+!profiles/**/*.md
+# pyproject.toml declares `readme = "README.md"`; the package build opens it.
+!README.md
+.env

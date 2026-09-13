@@ -6,12 +6,33 @@
 name = "UK mortgage broker intake"
 
 [gemini]
-live_model = "gemini-2.5-flash-native-audio-preview-12-2025"
+# 3.1-flash-live. History (2026-09-13): the day's first real call ran on
+# gemini-2.5-flash-native-audio-preview-12-2025 and heard the caller cleanly,
+# while 8 real calls on 3.1 transcribed fragments ("wire gauge", "conduct key").
+# Reverting to 2.5 (revision 00014/00015) did not bring that back: on the
+# softphone it answered 3 times in 50 s while the caller spoke 12 times, and it
+# rejects any language_code. Owner chose 3.1 with everything else from 00015.
+# The hearing problem on real phone lines is therefore still open.
+live_model = "gemini-3.1-flash-live-preview"
 analysis_model = "gemini-2.5-flash"
+# Live voice, pinned: without it Gemini picks a different voice per session
+# (owner heard a man on one call, a woman on the next, 2026-09-13).
+voice = "Kore"
+# The accent is prompt text, appended to conversation.md as the last line of the
+# system instruction. It lived inside the script until 2026-09-13, when an edit
+# dropped it and the line turned American; a required key here cannot be lost
+# that way. There is deliberately NO `language` key: native audio models reject
+# a language code (2.5 hangs up the call with "Unsupported language code") or
+# ignore it (3.1).
+accent = "Speak British English with a natural British accent throughout."
 
 [twilio]
 phone_number = "+441614960000"
 sms_sender_id = "Decana"
+# Twilio TTS voice for the <Say> disclosure. British, so the opening line matches
+# the AI voice that follows (owner, 2026-09-13).
+say_voice = "Polly.Amy-Neural"
+say_language = "en-GB"
 
 [operator]
 email = "intake@example-broker.co.uk"

@@ -1,0 +1,214 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>decana softphone</title>
+<!--
+  A browser softphone that speaks the Twilio Media Streams protocol to a decana
+  service, from this machine's microphone. Free: no Twilio, no PSTN, no number.
+
+  WHY: the caller direction of the bridge cannot be exercised by any smoke in
+  this repo (they feed synthetic or echoed audio), and a real call costs money
+  and a person with a phone. This page does what Twilio does, in order:
+    1. POST /voice with CallSid + From  (the server opens the Gemini session)
+    2. wait "disclosure seconds"         (stands in for <Say>; 0 for fast loops)
+    3. open wss://.../media, send `connected` + `start` with customParameters
+    4. stream 20 ms mu-law frames (160 bytes) at a steady 20 ms cadence
+    5. play every `media` frame that comes back, in order, gap-free
+    6. `stop` on hang-up
+  so the server sees exactly what a phone call produces. The timing log and the
+  bucket artifacts are written the same way.
+
+  Open it directly in Chrome (file:// is fine): allow the microphone once.
+  Works against http://localhost:8080 (ws://) and against Cloud Run (wss://).
+-->
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 0; padding: 16px; background: #fafafa; color: #222; }
+  main { max-width: 900px; margin: 0 auto; }
+  label { display: block; margin: 8px 0 2px; font-size: 12px; color: #555; }
+  input[type=text], input[type=number] { width: 100%; box-sizing: border-box; padding: 6px 8px; font: inherit; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 220px; }
+  button { font: inherit; padding: 8px 16px; margin: 12px 8px 0 0; cursor: pointer; }
+  #call { background: #1a7f37; color: #fff; border: 0; }
+  #hangup { background: #b3261e; color: #fff; border: 0; }
+  button:disabled { opacity: .4; cursor: default; }
+  #meter { height: 8px; background: #ddd; margin-top: 12px; }
+  #meter > div { height: 100%; width: 0; background: #1a7f37; transition: width 60ms; }
+  #status { margin-top: 8px; font-weight: 600; }
+  pre { background: #111; color: #ddd; padding: 12px; height: 320px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+  small { color: #666; }
+</style>
+<main>
+  <h2>decana softphone</h2>
+  <div class="row">
+    <div><label>Service base URL</label>
+      <input id="base" type="text" value="https://decana-voice-95407434241.europe-west2.run.app"></div>
+    <div><label>Caller number (E.164, what the SMS goes to)</label>
+      <input id="caller" type="text" value="+4916093411233"></div>
+    <div><label>Disclosure stand-in, seconds (0 = skip; a real call is ~14)</label>
+      <input id="disclosure" type="number" value="0" min="0" max="60"></div>
+  </div>
+  <button id="call">Call</button>
+  <button id="hangup" disabled>Hang up</button>
+  <div id="meter"><div></div></div>
+  <div id="status">idle</div>
+  <small>Times in the log are seconds since the <code>start</code> message, i.e. since the media socket opened — the same zero as <code>call_answered</code> in the timing log.</small>
+  <pre id="log"></pre>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const logEl = $("log"), meterEl = $("meter").firstElementChild, statusEl = $("status");
+  let t0 = 0;
+  const now = () => (performance.now() - t0) / 1000;
+  const log = (msg) => { logEl.textContent += `${t0 ? now().toFixed(2).padStart(7) : "   ----"}  ${msg}\n`; logEl.scrollTop = logEl.scrollHeight; };
+  const status = (s) => { statusEl.textContent = s; };
+
+  // --- mu-law, the G.711 reference algorithm ---------------------------------
+  const BIAS = 0x84, CLIP = 32635;
+  function mulawEncode(sample) {           // int16 -> uint8
+    let sign = (sample >> 8) & 0x80;
+    if (sign) sample = -sample;
+    if (sample > CLIP) sample = CLIP;
+    sample += BIAS;
+    let exponent = 7;
+    for (let mask = 0x4000; (sample & mask) === 0 && exponent > 0; exponent--, mask >>= 1) {}
+    const mantissa = (sample >> (exponent + 3)) & 0x0f;
+    return ~(sign | (exponent << 4) | mantissa) & 0xff;
+  }
+  function mulawDecode(u) {                // uint8 -> int16
+    u = ~u & 0xff;
+    const sign = u & 0x80, exponent = (u >> 4) & 0x07, mantissa = u & 0x0f;
+    let sample = ((mantissa << 3) + BIAS) << exponent;
+    sample -= BIAS;
+    return sign ? -sample : sample;
+  }
+  const b64 = bytes => btoa(String.fromCharCode(...bytes));
+  const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+  // --- state -----------------------------------------------------------------
+  let ws = null, ctx = null, mic = null, proc = null, ticker = null, currentStreamSid = "";
+  let pending = [];            // int16 samples waiting to be framed
+  let playhead = 0;            // AudioContext time the next inbound chunk starts
+  let inboundChunks = 0, lastInbound = -10, burstStart = 0, outboundFrames = 0;
+  let speaking = false, quietSince = 0;
+  const callSid = () => "SP" + Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+  const streamSid = () => "MZ" + Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+
+  async function call() {
+    $("call").disabled = true;
+    logEl.textContent = "";
+    const base = $("base").value.replace(/\/+$/, "");
+    const caller = $("caller").value.trim();
+    const wait = Number($("disclosure").value) || 0;
+    const sid = callSid(), ssid = streamSid();
+    currentStreamSid = ssid;
+
+    // 1. the webhook. no-cors: we cannot read the TwiML from a file:// origin,
+    //    and do not need to -- the side effect (session registered) is the point.
+    status("POST /voice …");
+    const form = new URLSearchParams({ CallSid: sid, From: caller, To: caller, Direction: "inbound" });
+    const tPost = performance.now();
+    try {
+      await fetch(base + "/voice", { method: "POST", mode: "no-cors", body: form });
+    } catch (e) { status("webhook failed: " + e); $("call").disabled = false; return; }
+    const postMs = Math.round(performance.now() - tPost);
+
+    // 2. the disclosure stand-in
+    if (wait > 0) { status(`disclosure stand-in: ${wait}s …`); await new Promise(r => setTimeout(r, wait * 1000)); }
+
+    // 3. microphone at 8 kHz -- Chrome resamples the device for us
+    try {
+      ctx = new AudioContext({ sampleRate: 8000 });
+      mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    } catch (e) { status("microphone: " + e); $("call").disabled = false; return; }
+    if (ctx.sampleRate !== 8000) { log(`WARNING AudioContext is ${ctx.sampleRate} Hz, not 8000 -- audio will be wrong`); }
+
+    // 4. the media socket
+    const wsUrl = base.replace(/^http/, "ws") + "/media";
+    ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ event: "connected", protocol: "Call", version: "1.0.0" }));
+      ws.send(JSON.stringify({ event: "start", streamSid: ssid, start: { callSid: sid, streamSid: ssid, customParameters: { caller } } }));
+      t0 = performance.now();
+      log(`start sent  (webhook took ${postMs} ms, disclosure stand-in ${wait}s, CallSid ${sid})`);
+      status("in call — speak");
+      $("hangup").disabled = false;
+      startMic(ssid);
+    };
+    ws.onmessage = (m) => {
+      let msg; try { msg = JSON.parse(m.data); } catch { return; }
+      if (msg.event === "media" && msg.media && msg.media.payload) return playInbound(unb64(msg.media.payload));
+      if (msg.event === "clear") { flushPlayback(); log("clear (barge-in) from server"); return; }
+      if (msg.event === "mark") return;
+      log(`server -> ${JSON.stringify(msg).slice(0, 160)}`);
+    };
+    ws.onclose = (e) => { log(`socket closed (code ${e.code})`); teardown(); };
+    ws.onerror = () => { log("socket error"); };
+  }
+
+  function startMic(ssid) {
+    const src = ctx.createMediaStreamSource(mic);
+    proc = ctx.createScriptProcessor(256, 1, 1);      // 32 ms at 8 kHz
+    src.connect(proc); proc.connect(ctx.destination); // destination needed to keep it running; gain 0 below
+    proc.onaudioprocess = (e) => {
+      const f = e.inputBuffer.getChannelData(0);
+      let rms = 0;
+      for (let i = 0; i < f.length; i++) { const s = Math.max(-1, Math.min(1, f[i])); pending.push(s < 0 ? s * 0x8000 : s * 0x7fff); rms += s * s; }
+      rms = Math.sqrt(rms / f.length);
+      meterEl.style.width = Math.min(100, rms * 400) + "%";
+      const t = now();
+      if (rms > 0.02) { if (!speaking) { speaking = true; log("caller speech starts"); } quietSince = t; }
+      else if (speaking && t - quietSince > 0.7) { speaking = false; log("caller speech ends"); }
+      // silence the monitor path so you do not hear yourself
+      e.outputBuffer.getChannelData(0).fill(0);
+    };
+    // 5. steady 20 ms cadence, one 160-sample frame per tick, like a phone
+    ticker = setInterval(() => {
+      if (!ws || ws.readyState !== 1) return;
+      if (pending.length < 160) return;
+      const frame = new Uint8Array(160);
+      for (let i = 0; i < 160; i++) frame[i] = mulawEncode(pending[i] | 0);
+      pending = pending.slice(160);
+      ws.send(JSON.stringify({ event: "media", streamSid: ssid, media: { payload: b64(frame) } }));
+      outboundFrames++;
+    }, 20);
+  }
+
+  function playInbound(bytes) {
+    const t = now();
+    if (t - lastInbound > 1.0) { burstStart = t; log(`model audio burst starts (chunk ${inboundChunks + 1})`); }
+    lastInbound = t; inboundChunks++;
+    const buf = ctx.createBuffer(1, bytes.length, 8000);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < bytes.length; i++) ch[i] = mulawDecode(bytes[i]) / 32768;
+    const node = ctx.createBufferSource();
+    node.buffer = buf; node.connect(ctx.destination);
+    const at = Math.max(ctx.currentTime + 0.02, playhead);
+    node.start(at);
+    playhead = at + buf.duration;
+  }
+  function flushPlayback() { playhead = 0; }
+
+  function hangup() {
+    if (ws && ws.readyState === 1) {
+      try { ws.send(JSON.stringify({ event: "stop", streamSid: currentStreamSid })); } catch {}
+      ws.close();
+    }
+    teardown();
+  }
+  function teardown() {
+    if (ticker) clearInterval(ticker); ticker = null;
+    if (proc) { try { proc.disconnect(); } catch {} } proc = null;
+    if (mic) mic.getTracks().forEach(t => t.stop()); mic = null;
+    if (ctx) { ctx.close(); } ctx = null;
+    if (t0) log(`hung up: ${outboundFrames} frames sent (${(outboundFrames * 0.02).toFixed(1)}s), ${inboundChunks} model chunks received`);
+    ws = null; pending = []; playhead = 0; inboundChunks = 0; lastInbound = -10; outboundFrames = 0; speaking = false;
+    $("hangup").disabled = true; $("call").disabled = false; status("idle");
+    meterEl.style.width = "0";
+  }
+
+  $("call").onclick = call;
+  $("hangup").onclick = hangup;
+  window.addEventListener("beforeunload", () => { if (ws) hangup(); });
+})();
+</script>

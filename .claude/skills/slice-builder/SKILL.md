@@ -156,7 +156,33 @@ Write `scripts/smoke_test_<slice>.py`:
 
 ### Step 6 — PROGRESS update
 
-After user reports smoke DONE, append to `PROGRESS.md` at repo root (create if missing):
+`PROGRESS.md` at repo root has two jobs. The second is what makes unattended operation survivable.
+
+**6a — the live handoff block, updated at EVERY unit, not at session end.** Sessions end on context limits and on crashes, and a session that dies unexpectedly must still leave this accurate. Keep a `## NOW` block at the top of the file:
+
+```
+## NOW — <slice> (updated <ISO timestamp>)
+
+- Ids green: <list>            Suite: <n> passed
+- Next unblocked item: <the single next thing to do>
+- PARKED: <id/task> — needs <the specific unblocker>   (one line each, or "none")
+- Staged, uncommitted: <paths>
+- Checks: ruff <state>, mypy --strict src scripts tests <state>
+```
+
+**Write it for a fresh instance with no memory of this session.** The acceptance test is literal: *if a cold reader cannot resume from this file alone, the file is wrong.* Its timestamp is also the liveness signal — with chat reserved for interrupts, nothing else tells the owner the machine is still moving.
+
+**Run that acceptance test, do not merely assert it.** Print the block and read it as a stranger would:
+
+```
+sed -n '/^## NOW/,/^---$/p' PROGRESS.md
+```
+
+The first time this was actually done, the file contained a duplicate `PARKED: none` directly below a parked item — contradicting itself about whether anything was blocked — plus an orphaned fragment left by a find-and-replace that had not matched, and two stale facts. **A find-and-replace that does not match fails silently**, so a block maintained that way drifts from what it claims exactly when it matters most: after a session death, read by an instance with no memory to correct it against.
+
+**So maintain it with `Edit`, which errors on a no-match, never with a script doing `str.replace`, which does not.** This rule was written, and then broken twice within the hour by the person who wrote it — both times a `python - <<'PY'` block reporting success while changing nothing, both times caught only by re-reading the file afterwards. Preferring the tool that fails loudly is not style; it is the only part of this that does not depend on remembering.
+
+**6b — the slice completion entry**, appended when the slice is genuinely done:
 
 ```
 ## Slice N — <name> (DONE YYYY-MM-DD)
@@ -168,7 +194,7 @@ After user reports smoke DONE, append to `PROGRESS.md` at repo root (create if m
 - Open for next slice: <questions / tech debt / "none">
 ```
 
-Hand back to user with a one-line summary. **STOP.** Do NOT commit on the user's behalf — let them review and commit.
+Do NOT commit on the user's behalf — stage and record. Under unattended operation this is a ledger line, not a turn; see "Unattended is the default" under Stop discipline.
 
 ## Anti-patterns (refuse politely if user requests these mid-slice)
 
@@ -279,7 +305,81 @@ The word **STOP** in this workflow is literal. After each step that says STOP:
 
 Resist the urge to chain steps. Each STOP is a checkpoint where the user can redirect cheaply. Without STOPs, the slice quietly drifts away from the seam.
 
-**Read the four subsections below before applying that literally — three of them narrow it, and a stop they have removed is not a checkpoint, it is a wasted turn.** Over-escalating is a failure to apply Constitution Article 5, not an excess of caution.
+**Read the subsections below before applying that literally — they narrow it, and a stop they have removed is not a checkpoint, it is a wasted turn.** Over-escalating is a failure to apply Constitution Article 5, not an excess of caution.
+
+### Unattended is the default: the log is the report, chat is an interrupt
+
+**This project runs unattended on a server for long stretches, with nobody reading chat.** A progress report addressed to a human is then written to nobody, and costs a turn boundary to produce. Ratified 2026-08-27; see `.claude/overseer/audit.md`.
+
+**Routine progress goes to `.claude/overseer/ledger.md` and `.claude/overseer/unattended-decisions.md`.** Nothing else. Emit chat output ONLY when a human is genuinely required:
+
+- blocked on a credential, a permission, or something only the owner can provision;
+- a premise falsified in a way that invalidates already-committed work;
+- the work list is exhausted;
+- something would require touching the hard-to-undo set.
+
+**Success is not an interrupt.** "Green, here's the count" is a line in the ledger, never a turn. This is the existing "Not success" rule widened from Step-4 cycles to every unit of work.
+
+### The work loop — what to do next, forever
+
+**Ratified 2026-08-27.** A rule that permits unattended running does not tell the loop
+what to do next. This does. Follow it in order, indefinitely:
+
+1. **Finish the current slice** — the next id in the ratified set, in dependency order.
+2. **Ids exhausted → take the next unbuilt node in the feature DAG**, run `/plan-slice`
+   for it, then build it. Repeat. The DAG is the queue; it is in the feature artifact's
+   Sequence section (`vertical-profile-bridge.md`: `S1 → S2 → S3 → S6 → S4 → S5 → S7`).
+3. **DAG exhausted → park and wait.** That, and only that, is the terminal condition.
+
+Without step 2 the loop starves after one slice — roughly a day. With it, a whole
+feature runs unattended.
+
+**Nodes that cannot run unattended are marked HUMAN-REQUIRED in the queue and parked on
+sight**, not attempted three times first. For `vertical-profile-bridge` those are **S6**
+(Cloud Run deploy — needs cloud credentials) and **S7** (real PSTN calls — needs a
+provisioned number and a human holding a phone). Everything before them is buildable
+without a human.
+
+**All items parked IS the exhausted-work-list interrupt.** Re-check a parked item when
+its named unblocker may have changed; a park whose unblocker cannot change without a
+human is a park on the human, and when every remaining item is one of those, write to
+chat.
+
+**When nothing can move, exit cleanly — do not idle.** An idling loop burns tokens to
+accomplish nothing and looks exactly like a working one from outside.
+
+### Planning artifacts are written incrementally, not at the end
+
+**Ratified 2026-08-27.** A multi-phase plan can take twenty critic rounds. If the
+drafts live only in the session scratchpad, a context limit or a crash destroys all of
+it and the next session starts from nothing — the exact failure `PROGRESS.md` exists to
+prevent, one level up.
+
+**Write `.claude/overseer/slice/<slug>.md` as soon as Phase 1 converges, and update it
+as each later phase converges.** Mark every not-yet-converged section
+`<!-- DRAFT: phase N, critic round M -->` so a reader cannot mistake an in-flight
+section for ratified text. Clear the markers when the cold read passes.
+
+The scratchpad is still the right place for a draft *within* a round. What must not
+live there alone is a phase that has already converged.
+
+### Park and route around — never stop to ask
+
+A stop assumes the owner is nearby. Unattended it idles the machine until they come back, which is the worst outcome available.
+
+**When something cannot proceed — a blocked dependency, three failed attempts, an ambiguity you cannot resolve — log it as PARKED with the specific thing that would unblock it, and move to the next unblocked item.** Stop only when nothing left can move.
+
+**The three-attempt loop guard is unchanged.** Parking is what it does instead of stopping: the guard against thrashing survives, the idle it used to cause does not. A PARKED entry that cannot name its unblocker is not a park, it is avoidance — and naming the unblocker is what makes the difference visible.
+
+### Tree-mutating harnesses restore in a `finally`, and verify the restore
+
+**Any operation that deliberately mutates the working tree — a mutation check, a temporary revert, a fault injection — restores in a `finally` and verifies the restore by checksum or diff before continuing. A harness that can die mid-mutation without restoring is not allowed to run at all.**
+
+Not hypothetical. On 2026-08-27 a mutation run hit a 2-minute timeout, was killed mid-mutation, and left `src/decana/twilio/server.py` carrying the mutant. It was caught only because a checksum had been taken by hand. Unattended, nothing would have caught it and every later unit would have been built on a corrupted tree.
+
+Two corollaries from the same slice, both earned the hard way:
+- **Assert the mutation actually applied** before trusting any result from it. A mutation that silently failed to apply produces a green run that proves nothing (`voice-intake-demo`, Seam 5).
+- **Bound anything that can hang.** A test that waits on a socket close with no timeout does not fail under a non-closing implementation — it blocks forever. Give such tests an explicit timeout so a wrong implementation fails legibly instead of stalling the run.
 
 ### The gate is the behavior list, not the cadence
 
@@ -293,9 +393,11 @@ Why the gate sits there: the owner's input has repeatedly changed the outcome at
 
 ### What still stops
 
-- Everything in **Escalate, without exception** above.
-- **Genuine failure, not milestones.** A test that fails for a reason its behavior did not predict; a falsified premise (Article 8); an assertion you cannot make hold as specified. Stop for surprises.
-- **Not success.** Do not spend a turn reporting that a cycle went green. "It works, here's the count" is a line in the next report, not a turn.
+**Under unattended operation these become PARK conditions, not stops** — log with the unblocker named, move to the next unblocked item. They remain stops only when nothing else can move.
+
+- Everything in **Escalate, without exception** above. Unattended: park it and route around, unless it touches the hard-to-undo set, which is a genuine interrupt.
+- **Genuine failure, not milestones.** A test that fails for a reason its behavior did not predict; a falsified premise (Article 8); an assertion you cannot make hold as specified. Unattended: park, unless the falsified premise invalidates already-committed work, which is a genuine interrupt.
+- **Not success.** Do not spend a turn reporting that a cycle went green. "It works, here's the count" is a line in the ledger, not a turn.
 
 The STOPs outside Step 4 — Step 0's scope validation, Step 1's docs report, Step 2's skeleton, Step 3's behavior-list approval, Step 5's smoke verification — are untouched **for a slice begun from a conversation**. Those are where the owner's judgment is load-bearing, because nothing upstream has captured it yet.
 

@@ -137,6 +137,32 @@ term (number/%/latency/error-rate/"reasonable"/"acceptable"/"fast"/...):
 
 ---
 
+# Unattended mode — what the three human gates become
+
+**Ratified 2026-08-27.** The loop above has three points that call `AskUserQuestion`
+and wait: a `CRITIC_ESCALATE`, the round-4 circuit breaker, and Phase 4's threshold
+gate. Each assumes the owner is nearby. When the loop runs unattended they would idle
+the machine until someone returns, which is the worst outcome available — so in that
+mode they become decide-and-log, in exactly these forms:
+
+| gate | attended | unattended |
+|---|---|---|
+| `CRITIC_ESCALATE` | `AskUserQuestion`, wait | take the critic's own recommendation, log it to `unattended-decisions.md` ordered by cost to reverse, continue |
+| Round-4 circuit breaker | `AskUserQuestion`, stop | if the rounds are finding **distinct** defects, continue and log the override; if a round re-litigates settled ground, that is oscillation — **park the phase** and move to the next unblocked item |
+| Phase 4 threshold | HARD HUMAN GATE | **measure it, never invent it**; record the measurement and its falsification condition inline, and log it as an Open Item for later ratification |
+
+**The threshold rule is the load-bearing one.** "Decide it yourself" must not become
+"pick a number". `gemini-live` set the precedent while running unattended: its "≥5
+words" threshold was measured against a real greeting, kept, and still surfaced as an
+Open Item. `twilio-server` followed it — the RMS floor came from round-tripping digital
+silence and speech through this repo's own codec, and the artifact states which end of
+the anchor is exact and which is a proxy.
+
+**Still a genuine chat interrupt in either mode:** anything touching the hard-to-undo
+set, a falsified premise that invalidates already-committed work, a needed credential
+or deploy, and `CRITIC_WRONG_SCOPE` — which means this is not a slice at all, so
+continuing would build the wrong thing faster.
+
 # Cold-reader final audit  (fresh eyes, anti-anchor)
 
 After all four phases converge, assemble the full artifact and spawn the

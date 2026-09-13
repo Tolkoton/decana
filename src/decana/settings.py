@@ -65,15 +65,61 @@ class Settings:
     artifact_dir: Path
     port: int
 
+    # Where S3 appends the per-chunk `{call_sid}.jsonl` timing log. Defaults to
+    # `artifact_dir`, so a local run sees no change. It exists because the two
+    # write patterns need different storage: dispatch writes three files per
+    # call and belongs in a durable bucket; the timing log appends many times a
+    # second and MUST stay on local disk. On the first Cloud Run test with a
+    # Cloud Storage FUSE mount as `artifact_dir` (2026-09-13) every append
+    # rewrote the object, GCS answered 429, the blocked writes stalled the
+    # server, and the next webhook returned 502.
+    timing_dir: Path = Path(".")
+
+    # Optional-until-present (S5-Q9). Ratified so the tracer build never requires
+    # secrets it does not use; S5 reads them and degrades per GROUP, never globally.
+    twilio_account_sid: str | None = None
+    twilio_auth_token: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+
+    @property
+    def has_twilio(self) -> bool:
+        """Both Twilio credentials present. Gates the SMS sender and NOTHING else."""
+        return bool(self.twilio_account_sid and self.twilio_auth_token)
+
+    @property
+    def has_smtp(self) -> bool:
+        """All five SMTP settings present. Gates the email sender and NOTHING else.
+
+        The two groups are deliberately independent (S5-Q23): a single
+        `all(seven)` gate would let a missing Twilio credential disable the
+        operator's email, which ratified guarantee (c) promises unconditionally.
+        """
+        return all(
+            v is not None
+            for v in (
+                self.smtp_host,
+                self.smtp_port,
+                self.smtp_user,
+                self.smtp_password,
+                self.smtp_from,
+            )
+        )
+
     @staticmethod
     def from_env(env: Mapping[str, str] | None = None) -> Settings:
-        """Flow: read the required three, then the optional four with defaults.
+        """Flow: read the required three, the optional four with defaults, then the
+        seven optional credentials S5 added (none of which this process requires).
 
         `env` is injectable so the failure path is testable without mutating the
         real process environment -- the one thing a test of "what happens when a
         variable is missing" must not do to its own runner.
         """
         env = os.environ if env is None else env
+        artifact_dir = Path(env.get("DECANA_ARTIFACT_DIR") or _DEFAULT_ARTIFACT_DIR)
         return Settings(
             profile_name=_require(env, "DECANA_PROFILE"),
             gemini_api_key=_require(env, "GEMINI_API_KEY"),
@@ -81,6 +127,14 @@ class Settings:
             profiles_root=Path(
                 env.get("DECANA_PROFILES_ROOT") or _repo_profiles_root()
             ),
-            artifact_dir=Path(env.get("DECANA_ARTIFACT_DIR") or _DEFAULT_ARTIFACT_DIR),
+            artifact_dir=artifact_dir,
             port=int(env.get("PORT") or _DEFAULT_PORT),
+            timing_dir=Path(env.get("DECANA_TIMING_DIR") or artifact_dir),
+            twilio_account_sid=env.get("TWILIO_ACCOUNT_SID"),
+            twilio_auth_token=env.get("TWILIO_AUTH_TOKEN"),
+            smtp_host=env.get("SMTP_HOST"),
+            smtp_port=int(env["SMTP_PORT"]) if env.get("SMTP_PORT") else None,
+            smtp_user=env.get("SMTP_USER"),
+            smtp_password=env.get("SMTP_PASSWORD"),
+            smtp_from=env.get("SMTP_FROM"),
         )

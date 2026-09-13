@@ -21,6 +21,53 @@ memory pollution and confabulation amplification.
 
 ## Cross-slice patterns
 
+### A verification defaults to PASSING when it does not recognise its input
+
+**Owner-ratified 2026-09-12 as a consolidated class.** Five instances across four slices, so
+this clears the 3-slice bar on its own. Each was previously filed as a one-off; they are one
+defect wearing five costumes.
+
+**Pattern.** A check is handed something it was not built to recognise — an unregistered
+slug, a mutation that never landed, a path that collects no tests, a directory outside its
+configured scope, a stub with nothing in it yet — and **reports success**. Not an error, not
+a warning: the same green a real pass produces. The check is then cited as evidence.
+
+| instance | the unrecognised input | what it reported |
+|---|---|---|
+| `check_ids.py`'s `SKIP` branch (`dispatch`, 2026-09-12) | a slug absent from `SLICES`, or a missing test file | prints `SKIP`, `continue`s **without setting `dirty`**, exits 0 — having checked nothing |
+| the first mutation harness (`voice-intake-demo`, Seam 5) | a mutation whose text never matched | "SURVIVED" — recorded as evidence that a test was weak |
+| `mutate_check.py`'s own interface (`twilio-server`) | `"file -k name"` passed as ONE argument -> pytest found no such path | collected zero tests, zero failures -> read as "survived" |
+| bare `uv run mypy` (`gemini-live`) | `tests/` — outside `pyproject.toml`'s `files` | "Success", while never opening the suite. Two real errors hid there |
+| the `app` fixture's `live_factory` guard (`twilio-server`) | an endpoint that was still an empty stub | passed, because nothing had been implemented to violate it |
+
+**Why it keeps happening.** Every one of these is a *sensible-looking* default. Skipping an
+unknown slug, not failing on a no-op mutation, honouring a config scope, a guard that nothing
+has tripped — each is defensible in isolation, and each turns the check into a no-op exactly
+when its input is the thing nobody thought about.
+
+**How to apply — build checks to FAIL CLOSED on unrecognised input.**
+- A check that cannot evaluate its subject **exits non-zero**, or it is not a check. `SKIP`
+  is a legitimate state only if it is also a failure state, or is asserted against an
+  expected-skip list.
+- **Assert the check's own preconditions before trusting its verdict**: the mutation applied;
+  tests were actually collected (a run that collected 0 is a hard error); the slug is
+  registered; the path is in scope.
+- **Read the printed line, never the exit code**, when a tool can report per-subject status.
+  `$?` is the wrong oracle for anything that loops over subjects.
+- When you write a new check, ask: *what input makes this say "fine" without looking?* That
+  question has found a defect every time it has been asked here.
+
+**Citations (per the citation-or-prune rule above):**
+- `ledger.md` 2026-09-12T00:00:00Z — dispatch (S5) — PLANNING_COMPLETE, category `strategy`.
+  The `check_ids.py` `SKIP`-exits-0 instance, and the `PROGRESS.md` claim it falsified
+  ("covers every slice" — it covers 2 of 4).
+- `ledger.md` 2026-08-27T09:00:00Z — twilio-server — PLANNING_COMPLETE, category `strategy`.
+  The `mutate_check.py` interface instance and the stub-passing fixture guard.
+- `ledger.md` 2026-08-25T21:56:31Z — voice-intake-demo — OVERSEER_ESCALATE, category
+  `recovery`. The never-applied mutation recorded as evidence.
+- `mutate_check.py`'s own module docstring now enumerates three of these as the reasons it
+  exists — the fix is in that file, the pattern is here.
+
 ### Artifacts state name-claims and third-party-behaviour claims at the same confidence as claims we control
 
 **Admitted under the manual-ratification clause, owner-ratified 2026-08-26; the re-check it demanded has now run.** The original entry said "observed on **one** slice (`voice-intake-demo`) — re-check against slice 2 before treating it as settled." Slice 2 (`gemini-live`) is done, and the pattern recurred twice more, in a new library and against a new failure surface. That is **two** slices, not three, so this still does not clear the 3-slice bar on its own — but it is no longer a single-slice observation, and the two new instances are the first that were caught *before* shipping rather than after. Re-check again against slice 3 (`twilio-server`), where the third-party surface is a wire protocol rather than an SDK.
@@ -135,6 +182,216 @@ supports, not which one is older.
   `strategy`. `Interrupted` missed by ten round-anchored rounds and found by the cold
   read — the same lesson one slice earlier, and the evidence base for
   `.claude/commands/plan-slice.md`'s cold-reader section.
+
+### A guarantee stated in prose, with tests, and no mechanism behind it
+
+**Admitted under the manual-ratification clause; recorded 2026-08-27 during unattended
+operation.** Two slices, same shape, and it is the most productive single check this
+project has.
+
+**Pattern.** A contract states a guarantee. The seams test it. Nobody writes the
+decision that *implements* it — and because the tests are written against fakes that
+never exercise the branch, the suite is green and the guarantee is absent.
+
+- `twilio-server`: ratified guarantee (b) — an exception from `on_call_end` is logged
+  and does not affect the socket — had no decision. The teardown ended with a bare
+  `await on_call_end(record)`. Found by walking guarantees against decisions.
+- `analysis`: the Errors section claimed "`analyse` never raises" and Phase 3's Seam 4
+  had five test cases for it, but no decision supplied the try/except.
+  `asyncio.wait_for` intercepts only `TimeoutError`, so `APIError` and JSON parse
+  failures propagated — **the two branches the ratified contract named most
+  explicitly.** Found the same way.
+
+**Why prose and tests together are not enough.** The prose reads as a commitment and
+the seams read as coverage, so a reviewer checking either alone finds nothing wrong.
+Only the *decision* names the mechanism, and only a map with a row per guarantee shows
+that the row is empty.
+
+**How to apply.** For every guarantee in the ratified contract **and every member of
+every ratified type**, require three things before the phase converges: **a decision
+that names the mechanism, a seam that names the wrong implementation, and an id that
+names the test node.** Two out of three is the failure mode above, and it has never
+announced itself — every instance was found by a coverage map walked row by row, never
+by re-reading.
+
+**It recurred FIVE times inside one artifact (`analysis`, 2026-08-27), and each
+instance was found by enumeration and none by re-reading.** In order:
+`analyse never raises` (prose + seams, no mechanism); the SDK entry point (the sync
+facade blocks the loop and defeats the timeout); `compliance_notes`; `model`
+(`live_model` vs `analysis_model`, one attribute apart); and `api_key`.
+
+**The last one is the one to remember, because it inverts the usual comfort.** The SDK
+falls back to `os.environ['GEMINI_API_KEY']` when no key is passed
+(`google/genai/_api_client.py:128-140`, verified by execution), and that variable is
+exactly what this project's deploy injects. So an implementation that drops the
+argument passes the unit suite, passes the real-API smoke, **and passes production** —
+there is no environment in the project's own deploy shape where it reveals itself. The
+usual reassurance "a real call would catch it" is false here.
+
+**A third instance, found by the cold read on `analysis` after the round-anchored
+review had credited the area as handled.** `Analysis.compliance_notes` had the type
+member and a seam whose *title* claimed to cover it — "`raw` and `compliance_notes`
+survive the failure paths" — but no decision naming the success-path mechanism and no
+id exercising one. Its only assertion sat on the failure path, where the code
+hardcodes `()`: it asserted that an empty tuple is a tuple, which a passthrough
+`Analysis(compliance_notes=data["compliance_notes"])` — shipping a mutable list inside
+a frozen dataclass — satisfies just as well.
+
+**A seventh instance added a sub-class the first six did not cover: an INCOMPLETE
+REPAIR.** Seam 4 enumerates five failure modes. The round that added `summary`-content
+assertions applied them to four of the five and silently skipped the empty-transcript
+one — so a `summary=""` on that branch would have passed all 24 nodes, violating the
+same guarantee the round had just been convened to enforce. The first six instances
+were coverage that never existed; this was a fix that did not cover its own scope, and
+it was introduced *by the repair itself*.
+
+**The rule that follows:** when a fix applies to a family, apply it to the whole family
+and then **count the family**. The sibling that gets skipped is the one nobody looks at
+again, because the area now reads as recently handled.
+
+**Two sharpenings this instance adds:**
+- **A seam's title is not coverage.** "Seam 5 covers `compliance_notes`" was true of
+  the heading and false of the assertions. Check what a seam *asserts*, not what it is
+  called.
+- **An assertion on a hardcoded value proves nothing.** Asserting a property of a
+  literal the implementation supplies — `()` here — passes for every implementation,
+  correct or not. The assertion has to sit on the path where the value is actually
+  *computed*.
+
+**EIGHT instances in ONE artifact (`dispatch`, 2026-09-12), and the sharpened rule.** This
+is the strongest form yet: not a fix that missed a sibling, but a SEQUENCE where each repair
+created the next defect.
+
+| # | the fix | what it left stale | found by |
+|---|---|---|---|
+| 1 | Q10-A widened wrapping to five effects | Q17 still listed `render_brief` as uncaught | walking the amendment through every Q mentioning raising |
+| 2 | Seams 14-18 added | §2 still said "every seam" while listing 13 | counting the table against the seam list |
+| 3 | Q19 supplied the missing email-success value | it made a TEXT PREFIX the discriminant — the divergence Q8 rejects | tracing the type from construction to consumption |
+| 4 | Q19 restructured to a `status` field | Q11 still built `SendOutcome(ok=False, ...)` | grep for every construction site |
+| 5 | Q23 reversed the credential predicate | Seam 15 kept the old polarity — `D15.b` and `D15.e` became MUTUALLY EXCLUSIVE for one input | tracing the reversal to every site testing it |
+| 6 | `D15.b` retired | the exit criterion still cited it; counts stale | grep the retired name |
+| 7 | Q24 moved `build_on_call_end` | Q22's scope clause still listed the old location | grep for every touched-file list |
+| 8 | (the artifact's own header) | — | — |
+
+**The rule, stronger than "run the enumeration to exhaustion":** when a revision changes a
+**TYPE**, a **COUNT**, or a **RATIFIED SENTENCE**, the repair is not done when the section
+reads correctly — it is done when every DEPENDENT SITE has been enumerated and visited. A
+type gets a grep of its construction sites; a count gets recounted against its source list;
+an amended sentence gets walked through every decision that cites it. Five of the eight were
+caught by exactly that move; none by re-reading the section that changed.
+
+**Corollary on redundancy:** instance 7 recurred because two places maintained a touched-file
+list. The fix was not to sync them but to leave ONE authoritative list and make the other
+point at it. Two copies of a fact is a stale site waiting to happen.
+
+**And the counterpart, from the same artifact's NINE cold reads:** the round-anchored rounds
+produced all eight of these, and none of the four findings that changed what gets built.
+`Analysis.summary` — ratified with the comment "for the brief" — was rendered NOWHERE, and
+fifteen round-anchored rounds passed over it before the first cold read found it from the
+type definition alone. `transcript.txt`'s content was undecided, so a `str(tuple)` repr
+passed all 37 ids then in force. The credential predicate was undefined, so the natural
+`all(seven)` gate would have disabled the operator's email over an unrelated missing Twilio
+credential. Rounds drive a raised objection to ground; only a cold read finds the surface
+nobody raised.
+
+**Citations (per the citation-or-prune rule above):**
+- `ledger.md` 2026-08-27T18:20:00Z — analysis — PLANNING_IN_FLIGHT, category
+  `strategy`. The `analyse`-never-raises instance, with the SDK source that proved it.
+- `ledger.md` 2026-08-27T09:00:00Z — twilio-server — PLANNING_COMPLETE, category
+  `strategy`. Guarantee (b), and the coverage-map technique that found it.
+- `ledger.md` 2026-09-12T00:00:00Z — dispatch (S5) — PLANNING_COMPLETE, category `strategy`.
+  The eight-instance sequence above, the nine cold reads, and the four omissions only the
+  cold read reached.
+
+### A vendor's sync and async facades are interchangeable to the type checker and not to the event loop
+
+**Admitted under the manual-ratification clause; recorded 2026-08-27.** One slice so
+far (`analysis`), so this does not clear the 3-slice bar — but it is recorded now
+because the defect is invisible to the entire testing approach this project relies on,
+and the next async vendor wrapper is the moment to re-check it.
+
+**Pattern.** `google-genai` ships the same method twice:
+`client.models.generate_content` (a blocking `def`) and
+`client.aio.models.generate_content` (an `async def`). Verified by execution —
+`inspect.iscoroutinefunction` is False and True respectively. Wrapping the **sync** one
+inside an `async def` produces a coroutine function with **no internal `await`**, which:
+
+- **silently disables `asyncio.wait_for`.** A timeout can only cancel at an `await`
+  point, so the call runs for the real network duration regardless of the timeout the
+  contract promises;
+- **blocks the whole event loop** — in this project, the loop forwarding audio for
+  every other live call, so one post-call analysis becomes dead air on strangers' calls.
+
+Both pass `mypy --strict`: the wrapper's signature is `async def … -> str` either way.
+
+**Why no fake can catch it, which is the part that matters.** A fake client is written
+`async def generate_json(...): await asyncio.sleep(...); return ...` — a real coroutine
+that suspends correctly. Every timeout test passes against it whether or not the real
+client ever awaits anything. This is the "a fake cannot be evidence for the contract
+the fake implements" rule from the entry above, in its most expensive form: here the
+fake is not merely uninformative, it is *actively reassuring* about the exact property
+that is broken.
+
+**How to apply.** When wrapping any vendor SDK in an `async def`, check
+`inspect.iscoroutinefunction` on the method you are calling, name the entry point in
+the decision, and assert it with a mock on the async path — `AsyncMock` on
+`.aio.…`, asserting it was **awaited**. The sync facade typically appears first in
+`dir()` and in the vendor's own examples, so it is what gets reached for.
+
+**Citations (per the citation-or-prune rule above):**
+- `ledger.md` 2026-08-27T19:00:00Z — analysis — PLANNING_COLD_READ, category
+  `strategy`. The finding, the execution that verified it, and S4-Q9/Seam 7(b)/`A7.c`.
+- `ledger.md` 2026-08-27T00:30:00Z — gemini-live — PLANNING_COMPLETE, category
+  `strategy`. The three earlier `google-genai` defects that established "read the
+  source, not the signature" — this is the same rule reaching a fourth time.
+
+### The mutation harness is unverified infrastructure used to verify everything else
+
+**Admitted under the manual-ratification clause; owner-ratified 2026-08-27.** Observed
+on two slices (`voice-intake-demo`, `twilio-server`), so it does not clear the 3-slice
+bar on its own — but both instances are the same mechanism failing in opposite
+directions, which is what makes it a pattern rather than two accidents.
+
+**Pattern.** Mutation checking is this project's strongest evidence that a test
+discriminates rather than merely passes. It is used to justify keeping
+passed-on-arrival tests, and its results are written into slice artifacts as proof. But
+**the harness itself is ad-hoc shell and Python written in the moment, and nothing
+verifies it.** Both failures were invisible from the result alone:
+
+1. **A mutation that never applied produced a meaningless pass** (`voice-intake-demo`,
+   Seam 5). The shell escaping was wrong, the guard `assert` failed, and the suite ran
+   against *unmutated* code. The output looked exactly like "the test survived a
+   mutation" — the wrong conclusion, reached from a green run.
+2. **A harness that died mid-mutation left the tree corrupted** (`twilio-server`,
+   2026-08-27). A 2-minute timeout killed the runner between applying a mutant and
+   restoring it, so `server.py` kept the mutant. Caught only because a checksum had
+   been taken by hand; nothing in the harness would have noticed, and every later unit
+   would have been built on corrupted source.
+
+The two directions matter: the first makes a *result* false, the second makes the
+*tree* false. A harness can therefore lie about what it proved, or silently change what
+is being proved about — and in both cases the visible output is a normal-looking test
+run.
+
+**How to apply — three rules, each earned by a specific failure.**
+- **Assert the mutation applied** before trusting any result from it (`assert old in
+  source`, or grep for a token the mutant removes). A "survived" verdict from a
+  mutation that never landed is worse than no check, because it is recorded as evidence.
+- **Restore in a `finally`, and verify the restore** by checksum or diff before
+  continuing. A harness that can die mid-mutation without restoring must not be run at
+  all — written into `.claude/skills/slice-builder/SKILL.md` on 2026-08-27.
+- **Bound anything that can hang.** A test waiting on a socket close with no timeout
+  does not fail under a non-closing implementation, it blocks — so the mutant that
+  should have died loudly instead stalls the run and, in that stall, is what killed the
+  harness above. The two defects were causally linked, not merely adjacent.
+
+**Citations (per the citation-or-prune rule above):**
+- `ledger.md` 2026-08-27T09:00:00Z — twilio-server — PLANNING_COMPLETE, category
+  `strategy`. The slice whose implementation produced instance 2.
+- `ledger.md` 2026-08-25T21:56:31Z — voice-intake-demo — OVERSEER_ESCALATE, category
+  `recovery`. The slice whose Seam 5 produced instance 1; its `PROGRESS.md` entry
+  records "a mutation run that appears to prove something can prove nothing".
+- Rule text and accepted risks: `.claude/overseer/audit.md`, 2026-08-27 (RATIFIED).
 
 ### Escalation calibration — decide two-way doors, escalate the named seven
 

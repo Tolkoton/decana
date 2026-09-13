@@ -62,8 +62,8 @@ class ProfileError(ValueError):
 
 SCHEMA: Mapping[str, frozenset[str]] = {
     "vertical": frozenset({"name"}),
-    "gemini": frozenset({"live_model", "analysis_model"}),
-    "twilio": frozenset({"phone_number", "sms_sender_id"}),
+    "gemini": frozenset({"live_model", "analysis_model", "voice", "accent"}),
+    "twilio": frozenset({"phone_number", "sms_sender_id", "say_voice", "say_language"}),
     "operator": frozenset({"email"}),
     "outcomes": frozenset({"allowed"}),
 }
@@ -103,8 +103,12 @@ def load_profile(name: str, root: Path = Path("profiles")) -> Profile:
         display_name=scalars["vertical.name"],
         live_model=scalars["gemini.live_model"],
         analysis_model=scalars["gemini.analysis_model"],
+        live_voice=scalars["gemini.voice"],
+        live_accent=scalars["gemini.accent"],
         phone_number=scalars["twilio.phone_number"],
         sms_sender_id=scalars["twilio.sms_sender_id"],
+        say_voice=scalars["twilio.say_voice"],
+        say_language=scalars["twilio.say_language"],
         operator_email=scalars["operator.email"],
         outcomes=outcomes,
         sms=sms,
