@@ -7,12 +7,23 @@
 name = "Home energy assessment intake"
 
 [gemini]
-live_model = "gemini-2.5-flash-native-audio-preview-12-2025"
+# See mortgage-broker/profile.toml for the 2026-09-13 model history.
+live_model = "gemini-3.1-flash-live-preview"
 analysis_model = "gemini-2.5-flash"
+# Live voice, pinned: without it Gemini picks a different voice per session
+# (owner heard a man on one call, a woman on the next, 2026-09-13).
+voice = "Charon"
+# Prompt text appended to conversation.md; see mortgage-broker/profile.toml,
+# including why there is no `language` key.
+accent = "Speak British English with a natural British accent throughout."
 
 [twilio]
 phone_number = "+442038900000"
 sms_sender_id = "EcoIntake"
+# Twilio TTS voice for the <Say> disclosure. British, so the opening line matches
+# the AI voice that follows (owner, 2026-09-13).
+say_voice = "Polly.Brian-Neural"
+say_language = "en-GB"
 
 [operator]
 email = "surveys@example-eco.co.uk"

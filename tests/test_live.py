@@ -617,3 +617,74 @@ def test_s10_start_sends_exactly_one_greeting_trigger() -> None:
     assert len(transport.greetings) == 1
     assert "disclosure" in transport.greetings[0]
     assert transport.sent == [], "no audio may precede the greeting turn"
+
+
+def test_s6_deploy_live_config_pins_voice_language_and_phone_vad() -> None:
+    """S6-deploy -- the session config carries the profile's voice, no language
+    code (the owner heard a different voice per call with none pinned) and the
+    phone-tuned activity detection (real calls transcribed only sentence tails
+    with the defaults; the softphone did not). Asserted on the config object,
+    not the wire: `build_live_config` is pure so no network is needed."""
+    from pathlib import Path
+
+    from decana.gemini.live import build_live_config, system_instruction
+    from decana.profile.load import load_profile
+
+    repo_root = Path(__file__).resolve().parent.parent
+    profile = load_profile("mortgage-broker", root=repo_root / "profiles")
+    config = build_live_config(profile)
+
+    assert config.speech_config is not None
+    # No language code, ever: 2.5 native audio closes the socket on one
+    # ("Unsupported language code 'en-GB'", real call 2026-09-13 13:15 UTC) and
+    # 3.1 ignores it. The accent travels in the prompt instead.
+    assert config.speech_config.language_code is None
+    voice = config.speech_config.voice_config
+    assert voice is not None and voice.prebuilt_voice_config is not None
+    assert voice.prebuilt_voice_config.voice_name == profile.live_voice
+    assert config.system_instruction == system_instruction(profile)
+    assert config.response_modalities == [types.Modality.AUDIO]
+
+    assert config.realtime_input_config is not None
+    vad = config.realtime_input_config.automatic_activity_detection
+    assert vad is not None and vad.disabled is False
+    assert (
+        vad.start_of_speech_sensitivity == types.StartSensitivity.START_SENSITIVITY_HIGH
+    )
+    assert vad.end_of_speech_sensitivity == types.EndSensitivity.END_SENSITIVITY_HIGH
+    assert vad.prefix_padding_ms == 400
+    assert vad.silence_duration_ms == 700
+
+
+def test_accent_setting_is_the_last_line_of_the_system_instruction() -> None:
+    """Owner request 2026-09-13 ("can it be a setting? lets build it") -- the
+    profile's `accent` sentence is appended to the call script as the final
+    paragraph, and the join is identical whether the script file ends without a
+    newline, with one, or with several. The script is otherwise untouched: the
+    instruction starts with it verbatim (modulo trailing whitespace).
+
+    WHY a setting: the sentence lived inside `conversation.md` and an edit
+    dropped it, turning every call American. A required key beside the voice
+    pin cannot be lost by editing prose."""
+    from dataclasses import replace
+    from pathlib import Path
+
+    from decana.gemini.live import system_instruction
+    from decana.profile.load import load_profile
+
+    repo_root = Path(__file__).resolve().parent.parent
+    shipped = load_profile("mortgage-broker", root=repo_root / "profiles")
+
+    for trailing in ("", "\n", "\n\n\n"):
+        profile = replace(
+            shipped,
+            conversation="You are an intake assistant.\n\nAsk one question." + trailing,
+            live_accent="Speak Scottish English.",
+        )
+        assert system_instruction(profile) == (
+            "You are an intake assistant.\n\nAsk one question.\n\n"
+            "Speak Scottish English.\n"
+        ), f"trailing={trailing!r}"
+    # And the shipped profile actually carries a British accent sentence.
+    assert "British" in shipped.live_accent
+    assert system_instruction(shipped).endswith(shipped.live_accent + "\n")

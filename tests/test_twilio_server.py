@@ -12,10 +12,12 @@ import json
 import logging
 import os
 import socket
+import struct
 import subprocess
 import sys
 import threading
 import time
+import wave
 import xml.etree.ElementTree as ET
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import replace
@@ -199,6 +201,8 @@ class FakeBridge:
         timing: Any,
         inbound: Any,
         outbound: Any,
+        recorder: Any = None,
+        inbound_gain: float = 1.0,
         order: list[str] | None = None,
         close_raises: BaseException | None = None,
     ) -> None:
@@ -383,6 +387,44 @@ def test_s6b_say_carries_the_disclosure_and_stream_points_at_media(
     assert parameter.get("value") == "+447700900123"
 
 
+def test_s6_deploy_say_carries_the_profile_voice_and_language(
+    app: FastAPI, profile: Profile
+) -> None:
+    """S6-deploy -- `<Say>` carries `voice` and `language` from the profile, on the
+    answer TwiML; the accent is vertical data, not S3 code (owner, 2026-09-13)."""
+    client = TestClient(app)
+
+    response = client.post(
+        "/voice", data={"CallSid": "CA-s6v", "From": "+447700900123"}
+    )
+
+    say = ET.fromstring(response.text).find("Say")
+    assert say is not None
+    assert say.get("voice") == profile.say_voice
+    assert say.get("language") == profile.say_language
+
+
+def test_s6_deploy_outbound_call_attributes_the_caller_to_To(app: FastAPI) -> None:
+    """S6-deploy -- on `Direction=outbound-api`, the stream's caller parameter is
+    `To`, because the human who answers an operator-placed call is the callee.
+    Inbound (or missing `Direction`) keeps `From`, as S6.b asserts."""
+    client = TestClient(app)
+
+    response = client.post(
+        "/voice",
+        data={
+            "CallSid": "CA-s6o",
+            "From": "+18392749051",
+            "To": "+447700900123",
+            "Direction": "outbound-api",
+        },
+    )
+
+    parameter = ET.fromstring(response.text).find("Connect/Stream/Parameter")
+    assert parameter is not None
+    assert parameter.get("value") == "+447700900123"
+
+
 def test_s6c_hostile_disclosure_and_caller_still_produce_parsable_twiml(
     tmp_path: Path, profile: Profile
 ) -> None:
@@ -509,6 +551,64 @@ def test_s1b_the_socket_adopts_the_session_the_webhook_opened(
     assert len(factory.calls) == 1, "the socket must not open a second session"
     assert opened.sent, "the adopted session received the caller's audio"
     assert factory.sessions[0] is opened
+
+
+def test_recording_dir_receives_both_legs_named_by_call_sid(
+    profile: Profile, tmp_path: Path
+) -> None:
+    """Owner request 2026-09-13 -- with `recording_dir` set, a call leaves two WAVs.
+
+    `{CallSid}.caller.wav` holds the 160 samples of the one frame sent; the
+    model file exists even though the fake session sent no audio. The directory
+    does not exist beforehand: `create_app` must create it, since on Cloud Run
+    a missing directory would surface only at the end of a real call.
+    """
+    factory = RecordingFactory(lambda: datetime(2000, 1, 1, tzinfo=UTC))
+    recordings = tmp_path / "recordings"
+    client = TestClient(_app_with(profile, tmp_path, factory, recording_dir=recordings))
+    client.post("/voice", data={"CallSid": "CA-rec", "From": "+447700900123"})
+
+    with client.websocket_connect("/media") as ws:
+        ws.send_json(_start_message("CA-rec"))
+        ws.send_json(_media_message(_mulaw_frame()))
+        ws.send_json({"event": "stop", "streamSid": "MZ-1"})
+
+    with wave.open(str(recordings / "CA-rec.caller.wav"), "rb") as caller:
+        assert (caller.getframerate(), caller.getnframes()) == (8000, 160)
+    with wave.open(str(recordings / "CA-rec.model.wav"), "rb") as model:
+        assert (model.getframerate(), model.getnframes()) == (8000, 0)
+
+
+def test_inbound_gain_lifts_what_the_live_session_receives(
+    profile: Profile, tmp_path: Path
+) -> None:
+    """Owner request 2026-09-13 -- `inbound_gain` reaches the real bridge.
+
+    Two apps, one frame each, identical except for the gain: the audio the
+    session received under x4 has ~4x the RMS of the audio under x1. The
+    resampler dithers, so a ratio band rather than exact bytes (Premise 6).
+    """
+    # Quiet mu-law codes only (0xE0-0xFF and 0x60-0x7F decode to |s| <= 372), so
+    # x4 stays far from the rails and the ratio is a gain measurement, not a
+    # clipping measurement. 160 bytes = one 20 ms frame.
+    quiet = (bytes(range(0xE0, 0x100)) + bytes(range(0x60, 0x80))) * 3
+    frame = base64.b64encode(quiet[:160]).decode()
+    rms: dict[float, float] = {}
+    for gain in (1.0, 4.0):
+        factory = RecordingFactory(lambda: datetime(2000, 1, 1, tzinfo=UTC))
+        client = TestClient(_app_with(profile, tmp_path, factory, inbound_gain=gain))
+        client.post("/voice", data={"CallSid": f"CA-g{gain}", "From": "+447700900123"})
+        with client.websocket_connect("/media") as ws:
+            ws.send_json(_start_message(f"CA-g{gain}"))
+            for _ in range(8):  # enough for soxr to emit
+                ws.send_json(_media_message(frame))
+            ws.send_json({"event": "stop", "streamSid": "MZ-1"})
+        pcm = b"".join(factory.sessions[0].sent)
+        assert pcm, "fixture must reach the session"
+        samples = struct.unpack(f"<{len(pcm) // 2}h", pcm)
+        rms[gain] = (sum(s * s for s in samples) / len(samples)) ** 0.5
+
+    assert 3.8 < rms[4.0] / rms[1.0] < 4.2
 
 
 def test_s1c_the_fake_exposes_no_start_so_a_second_start_cannot_pass(

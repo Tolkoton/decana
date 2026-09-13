@@ -337,6 +337,78 @@ class GeminiLiveSession:
             self._emit_closed(f"send_failed: {type(exc).__name__}: {exc}")
 
 
+# Speech-detection settings for PHONE audio. Not profile data: they describe the
+# transport, not the vertical.
+#
+# WHY these values (2026-09-13, first real calls): with the defaults, Gemini
+# transcribed only the TAILS of what the caller said on a real phone line
+# ("wire gauge" for "remortgage", "300" for a whole sentence), answered the
+# fragments, and after a couple of exchanges stopped taking its turn. The same
+# service driven from a laptop microphone (scripts/softphone.html) held seven
+# clean exchanges. Phone audio is narrowband, quieter and noisier, so speech
+# start is detected late and speech end is detected late or never.
+#   * START HIGH   -- trigger on quiet phone speech rather than waiting for a
+#                     loud onset.
+#   * prefix 400ms -- keep the audio BEFORE the detected start, which is where
+#                     the lost word-beginnings were.
+#   * END HIGH     -- treat a short pause as the caller finishing, so line noise
+#                     cannot hold the turn open indefinitely.
+#   * silence 700  -- the pause length that counts as "finished"; long enough
+#                     that a breath mid-sentence does not cut the caller off.
+# Unverified until the next real call; the softphone cannot reproduce the fault.
+_PHONE_VAD = types.AutomaticActivityDetection(
+    disabled=False,
+    start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
+    end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
+    prefix_padding_ms=400,
+    silence_duration_ms=700,
+)
+
+
+def system_instruction(profile: Profile) -> str:
+    """The call script, then the accent sentence, separated by one blank line.
+
+    The accent is prompt text, not a voice parameter (`Profile.live_accent`), so
+    this is where it reaches the model. Appended rather than prepended so the
+    script's own opening -- the role, the disclosure-already-played note -- keeps
+    its position; the script's trailing whitespace is normalised so the join is
+    the same whether or not the file ends in a newline.
+    """
+    return f"{profile.conversation.rstrip()}\n\n{profile.live_accent}\n"
+
+
+def build_live_config(profile: Profile) -> types.LiveConnectConfig:
+    """The session config: audio out, both transcriptions, a PINNED voice, phone VAD.
+
+    Pure, so the test can assert what reaches Gemini without a network. The
+    voice, language and accent come from the profile (a vertical decides how it
+    sounds); the activity detection is `_PHONE_VAD` (the transport decides how
+    it listens).
+    """
+    return types.LiveConnectConfig(
+        response_modalities=[types.Modality.AUDIO],
+        system_instruction=system_instruction(profile),
+        input_audio_transcription=types.AudioTranscriptionConfig(),
+        output_audio_transcription=types.AudioTranscriptionConfig(),
+        speech_config=types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name=profile.live_voice
+                )
+            ),
+            # No language_code, deliberately. Native audio models "don't support
+            # explicitly setting the language code" (Live API guide): 3.1 ignored
+            # it, 2.5 closes the socket with 1007 "Unsupported language code
+            # 'en-GB'" -- which hung up a real call after the disclosure
+            # (2026-09-13 13:15 UTC). The accent is steered by the prompt instead
+            # (`Profile.live_accent`).
+        ),
+        realtime_input_config=types.RealtimeInputConfig(
+            automatic_activity_detection=_PHONE_VAD
+        ),
+    )
+
+
 async def open_live_session(
     profile: Profile,
     *,
@@ -354,12 +426,7 @@ async def open_live_session(
     that never opened.
     """
     client = genai.Client(api_key=api_key)
-    config = types.LiveConnectConfig(
-        response_modalities=[types.Modality.AUDIO],
-        system_instruction=profile.conversation,
-        input_audio_transcription=types.AudioTranscriptionConfig(),
-        output_audio_transcription=types.AudioTranscriptionConfig(),
-    )
+    config = build_live_config(profile)
     manager = client.aio.live.connect(model=profile.live_model, config=config)
     transport = await manager.__aenter__()
 
@@ -380,5 +447,6 @@ __all__ = [
     "LiveEvent",
     "LiveTransport",
     "Transcript",
+    "build_live_config",
     "open_live_session",
 ]

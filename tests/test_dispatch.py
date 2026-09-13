@@ -31,8 +31,12 @@ def make_profile(**over: object) -> Profile:
         "display_name": "UK mortgage broker intake",
         "live_model": "live-model-x",
         "analysis_model": "analysis-model-y",
+        "live_voice": "Kore",
+        "live_accent": "Speak British English.",
         "phone_number": "+441234567890",
         "sms_sender_id": "BrokerSMS",
+        "say_voice": "Polly.Amy-Neural",
+        "say_language": "en-GB",
         "operator_email": "ops@example.test",
         "outcomes": ("qualified_lead", "not_eligible"),
         "sms": {
@@ -464,6 +468,34 @@ def _dispatch(tmp: Path, **over: object):  # type: ignore[no-untyped-def]
             **kw,  # type: ignore[arg-type]
         )
     )
+
+
+def test_timing_log_is_copied_next_to_the_artifacts(tmp_path: Path) -> None:
+    """S6-deploy: a timing log written elsewhere (local disk in production) is
+    copied ONCE into `artifact_dir` at call end, byte-identical, under its name."""
+    hot = tmp_path / "hot"
+    hot.mkdir()
+    source = hot / "CA_TEST_1.jsonl"
+    source.write_text('{"event":"call_answered"}\n', encoding="utf-8")
+    out = tmp_path / "out"
+
+    _dispatch(out, record=make_record(timing_path=source))
+
+    assert (out / "CA_TEST_1.jsonl").read_bytes() == source.read_bytes()
+
+
+def test_timing_log_already_in_artifact_dir_is_left_alone(tmp_path: Path) -> None:
+    """S6-deploy: when timing_dir IS artifact_dir (every local run) the stage is a
+    no-op -- no self-copy, no error, and a missing file is not a failure either."""
+    source = tmp_path / "CA_TEST_1.jsonl"
+    source.write_text("x\n", encoding="utf-8")
+
+    report = _dispatch(tmp_path, record=make_record(timing_path=source))
+    assert source.read_text(encoding="utf-8") == "x\n"
+    assert not [e for e in report.errors if e.startswith("timing")]
+
+    report = _dispatch(tmp_path, record=make_record(timing_path=tmp_path / "none"))
+    assert not [e for e in report.errors if e.startswith("timing")]
 
 
 def test_transcript_file_is_render_transcript_output(tmp_path: Path) -> None:
@@ -941,6 +973,27 @@ def _settings(tmp: Path, **over: str) -> object:
     for k in [k for k, v in env.items() if v == ""]:
         del env[k]
     return Settings.from_env(env)
+
+
+def test_timing_dir_defaults_to_artifact_dir(tmp_path: Path) -> None:
+    """S6-deploy: with `DECANA_TIMING_DIR` unset, the timing log shares
+    `artifact_dir` -- a local run sees no change from the split."""
+    from decana.settings import Settings
+
+    settings = _settings(tmp_path)
+    assert isinstance(settings, Settings)
+    assert settings.timing_dir == settings.artifact_dir == tmp_path
+
+
+def test_timing_dir_is_read_from_its_own_variable(tmp_path: Path) -> None:
+    """S6-deploy: `DECANA_TIMING_DIR` separates the per-chunk append log from
+    the dispatch artifacts, so the bucket mount never sees the hot path."""
+    from decana.settings import Settings
+
+    settings = _settings(tmp_path, DECANA_TIMING_DIR=str(tmp_path / "hot"))
+    assert isinstance(settings, Settings)
+    assert settings.timing_dir == tmp_path / "hot"
+    assert settings.artifact_dir == tmp_path
 
 
 def _run_handler(tmp: Path, **over: str) -> tuple[list[str], Path]:

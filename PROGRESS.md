@@ -27,6 +27,67 @@ guessing.
   ledger `2026-09-12T04:00:00Z — CROSS_SLICE_VOCABULARY_CHECK`.
 - **Checks:** `ruff check`, `ruff format --check`, `uv run mypy --strict src scripts tests`
   all clean (46 files).
+- **Added 2026-09-13, outside any slice (owner request): audio recording of every call.**
+  Owner heard a woman AND a man on one softphone call (`SP7772e39f…`, 12:15 UTC, revision
+  00009 with the Kore pin live) and no artifact held audio. `src/decana/bridge/recording.py`
+  buffers each leg's mu-law and writes `<sid>.caller.wav` + `<sid>.model.wav` once at
+  teardown into `DECANA_ARTIFACT_DIR` (the bucket). Tests: `tests/test_recording.py` (4),
+  one in `test_session.py`, one in `test_twilio_server.py` — deliberately WITHOUT behavior
+  ids (no ratified contract; `check_ids.py` still clean). **Suite: 339 passed.**
+  Deployed by the owner as revision 00010 (12:34 UTC). The two-voice question is open
+  until a recorded call reproduces it.
+- **Added 2026-09-13 (owner request): `[gemini] accent` profile key.** Cloud Build source
+  archaeology showed the British accent was one sentence in `conversation.md`, present in
+  the 10:18 and 10:26 builds and dropped from 10:47 on — that is when the line "turned
+  American". It is now a REQUIRED profile scalar (`Profile.live_accent`) that
+  `decana.gemini.live.system_instruction` appends to the script as its last paragraph;
+  the scripts keep only the vocabulary sentence. Suite: **343 passed**. Deployed as
+  revision 00013 (12:53 UTC).
+- **Removed 2026-09-13: the `[gemini] language` key and `speech_config.language_code`.**
+  The first call on revision 00014 (13:15 UTC) hung up after the disclosure: Gemini closed
+  the socket with 1007 "Unsupported language code 'en-GB' for
+  gemini-2.5-flash-native-audio-preview-12-2025", `live_factory` raised, the webhook
+  answered with the hang-up TwiML. 3.1 had silently ignored the same code. Google documents
+  native audio models don't support it, so the field is gone rather than made optional.
+  Both disclosures also cut to one sentence (owner: "way shorter"). Suite: **340 passed**
+  (three language-scalar rows gone with the key).
+- **Model back to `gemini-3.1-flash-live-preview` (revision 00016, owner's call).** On 2.5
+  (rev 00015) the softphone log showed the model answering 3 times in 50 s against 12
+  caller utterances — worse turn-taking than 3.1, not better hearing. Everything else from
+  00015 kept (no language code, accent key, short disclosure, recording). Owner on the
+  first real call on 00016 (`CA927f30…`, 13:33 UTC): "much better — only 2 times I had to
+  repeat and I was able to finish".
+- **Added 2026-09-13 (owner: "improve the hearing a bit more"): +12 dB inbound gain**,
+  `src/decana/bridge/gain.py`, applied after mu-law decode and before the resample; the
+  recording keeps the raw leg. Evidence from `CA927f30….caller.wav`: caller speech at
+  -39 dBFS (p90), model at -10 dBFS, noise floor -72 dBFS; softphone legs measure -32 to
+  -36. Transport-level constant like `_PHONE_VAD`, wired in `__main__`; tests default to
+  1.0. Suite: **346 passed**. Deployed as revision 00017.
+  **Corrected on the next call (`CA0d88da…`, owner: "slightly worse"):** the caller spoke
+  louder (-15 dBFS p97) and +12 dB with a HARD clip squared off 7.6 % of frames; the
+  garbled transcript words sit on those syllables. Then **+9 dB through a tanh soft
+  limiter** (revision 00018) — owner: "much worse, barely working": `CA52d9c0…` shows the
+  model taking 3 turns in 35 s and silent for 19 s while inbound frames flowed without a
+  gap; caller raw p90 -47 dBFS. Mechanism NOT established (between-word level is digital
+  silence on all three calls, so not amplified noise); the gain was simply the only
+  variable against the best call. **Gain set to 0 dB (no-op) = revision 00016's audio
+  path**, deployed as revision 00019. Module kept; any future lift = an A/B pair of calls.
+- **ESCALATED to owner, not built: barge-in clear.** The same call's transcript shows the
+  model cut off twice mid-sentence ("I see. Have you spoken to a" / "Have you spoken to
+  a") and the caller saying "Hello?"; the two repeats coincide with interruptions, not
+  with missed words. `Interrupted` is a log-only no-op (feature Q4, S13.a/b) and the
+  server never sends Twilio `clear`, so the stale buffered audio keeps playing while the
+  model restarts — the caller hears a stumble/overlap. The fix (drop the outbound queue and
+  send `{"event":"clear"}` on `Interrupted`) conflicts with S13.a's assertion that a chunk
+  queued BEFORE the interruption is still delivered. Contract change → owner's decision.
+- **Reverted 2026-09-13 (owner: "still hearing me poorly"): `live_model` back to
+  `gemini-2.5-flash-native-audio-preview-12-2025`** in both profiles, deployed as revision
+  00014. Evidence from Cloud Build sources + bucket transcripts: the first real call (09:02
+  UTC, rev 00002, 2.5 model, default VAD) heard the caller cleanly; the 09:36 build swapped
+  to `gemini-3.1-flash-live-preview` with no recorded reason, and all 8 real calls on 3.1
+  transcribed fragments, with and without `_PHONE_VAD`. Softphone calls hear fine on both,
+  so the laptop cannot reproduce it. `_PHONE_VAD` left in place — one variable at a time;
+  it is still marked unverified in `live.py`. **Owner to confirm by phone.**
 - **Next unblocked item: NOTHING in S5.** The remaining feature nodes are **S6 deploy** and
   **S7 real calls**, both marked HUMAN-REQUIRED in the queue below. Per the work loop, that
   is the terminal condition: the DAG has no node left that can run without a human.

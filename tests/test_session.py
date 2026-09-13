@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import base64
 import json
+import wave
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -32,6 +33,7 @@ import numpy as np
 import pytest
 
 from decana.bridge.codec import AudioFrameError, mulaw_decode, mulaw_encode
+from decana.bridge.recording import CallRecorder
 from decana.bridge.resampler import (
     GEMINI_OUTPUT_RATE_HZ,
     TWILIO_RATE_HZ,
@@ -1082,3 +1084,45 @@ def test_close_leaves_the_timing_log_intact_when_teardown_fails(
     assert raw.endswith("\n"), "log ends mid-line -- a write was interrupted"
     for line in raw.splitlines():
         json.loads(line)
+
+
+def _wav_frames(path: Path) -> bytes:
+    with wave.open(str(path), "rb") as wav:
+        return wav.readframes(wav.getnframes())
+
+
+def test_recorder_captures_exactly_what_crossed_each_leg(tmp_path: Path) -> None:
+    """Owner request 2026-09-13 -- the bridge records both legs' mu-law bytes, exactly.
+
+    Caller leg: the bytes decoded from Twilio's frames, in order. Model leg: the
+    bytes the Twilio fake received, base64-decoded -- a SAME-INSTANCE comparison
+    (see the mu-law note at the top of this file), so it is exact with no
+    tolerance. The teardown flush runs before the recorder closes, so the
+    model file must include the tail the fake received during close().
+    """
+    twilio = FakeTwilioClient()
+    gemini = FakeGeminiClient()
+    recorder = CallRecorder(
+        caller_path=tmp_path / "caller.wav", model_path=tmp_path / "model.wav"
+    )
+    session = BridgeSession(
+        twilio,
+        gemini,
+        TimingRecorder(_sequence_clock(STAMPS), tmp_path / "call.jsonl"),
+        inbound_resampler(),
+        outbound_resampler(),
+        recorder=recorder,
+    )
+    frames = [RAW_FRAME, bytes(reversed(RAW_FRAME))]
+
+    session.start()
+    for frame in frames:
+        session.handle_twilio_frame(base64.b64encode(frame).decode("ascii"))
+    for seed in range(CHUNKS_UNTIL_OUTBOUND_EMITS):
+        session.handle_gemini_chunk(gemini_chunk(seed))
+    session.close()
+
+    sent_mulaw = b"".join(base64.b64decode(s) for s in twilio.sent)
+    assert sent_mulaw, "fixture must produce outbound audio, including the tail"
+    assert _wav_frames(tmp_path / "caller.wav") == mulaw_decode(b"".join(frames))
+    assert _wav_frames(tmp_path / "model.wav") == mulaw_decode(sent_mulaw)

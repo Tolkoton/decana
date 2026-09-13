@@ -23,6 +23,7 @@ is the failure mode the amendment exists to prevent.
 
 import asyncio
 import logging
+import shutil
 from collections.abc import Callable
 from pathlib import Path
 
@@ -76,6 +77,24 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _copy_timing_log(timing_path: Path, artifact_dir: Path) -> None:
+    """Bring the per-chunk timing log next to the other artifacts, ONCE.
+
+    S3 appends that log many times a second, so in production it lives on local
+    disk (`Settings.timing_dir`) while `artifact_dir` is a Cloud Storage mount
+    that tolerates about one write per second per object. One copy at call end
+    is the compromise: the turnlog S7 judges latency on reaches the bucket, and
+    the hot path never touches it. A no-op when both are the same directory
+    (every local run), or when S3 never wrote the file.
+    """
+    if not timing_path.is_file():
+        return
+    target = artifact_dir / timing_path.name
+    if target.resolve() == timing_path.resolve():
+        return
+    shutil.copyfile(timing_path, target)
+
+
 async def dispatch(
     record: CallRecord,
     analysis: Analysis,
@@ -101,6 +120,7 @@ async def dispatch(
     analysis_outcome = _run(
         "analysis", lambda: _write(analysis_path, analysis.raw), errors
     )
+    _run("timing", lambda: _copy_timing_log(record.timing_path, artifact_dir), errors)
 
     sms_outcome = await _send_sms(
         record, analysis, profile, sms=sms, artifact_dir=artifact_dir, errors=errors

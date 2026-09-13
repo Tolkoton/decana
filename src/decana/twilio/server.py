@@ -27,6 +27,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 
 from fastapi import FastAPI, Form, Response, WebSocket, WebSocketDisconnect
 
+from decana.bridge.recording import CallRecorder
 from decana.bridge.resampler import inbound_resampler, outbound_resampler
 from decana.bridge.session import BridgeSession
 from decana.bridge.timing import TimingRecorder
@@ -34,7 +35,7 @@ from decana.gemini.live import AudioChunk, Closed, Interrupted, LiveEvent, Trans
 from decana.profile.model import Profile
 from decana.twilio.records import CallRecord, OnCallEnd, TranscriptTurn
 
-__all__ = ["LiveSession", "LiveSessionFactory", "create_app"]
+__all__ = ["LiveSession", "LiveSessionFactory", "create_app", "resolve_caller"]
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +223,7 @@ def _render_twiml(profile: Profile, public_wss_url: str, caller: str) -> str:
     still satisfying a `"<Say>" in body` assertion.
     """
     response = Element("Response")
-    say = SubElement(response, "Say")
+    say = _say(response, profile)
     say.text = profile.disclosure
     connect = SubElement(response, "Connect")
     stream = SubElement(connect, "Stream", {"url": f"{public_wss_url}/media"})
@@ -238,10 +239,39 @@ def _render_hangup_twiml(profile: Profile) -> str:
     up. No `<Connect>`: there is no session for a stream to carry.
     """
     response = Element("Response")
-    say = SubElement(response, "Say")
+    say = _say(response, profile)
     say.text = profile.disclosure
     SubElement(response, "Hangup")
     return tostring(response, encoding="unicode")
+
+
+def _say(response: Element, profile: Profile) -> Element:
+    """One `<Say>` carrying the profile's voice and language.
+
+    Both attributes come from the profile because the accent is vertical-
+    specific: the disclosure is the first thing the caller hears, and a UK
+    brokerage opening in Twilio's default American voice undercuts the AI voice
+    that follows it (owner, 2026-09-13).
+    """
+    return SubElement(
+        response,
+        "Say",
+        {"voice": profile.say_voice, "language": profile.say_language},
+    )
+
+
+def resolve_caller(*, from_number: str, to_number: str, direction: str) -> str:
+    """The human on the line: `From` on an inbound call, `To` on an outbound one.
+
+    Twilio's `/voice` POST carries `Direction`. For a call the operator PLACES
+    via the REST API (`outbound-api` -- the cheap way to test without dialling
+    internationally), `From` is our own number and the person who answers is
+    `To`. Without this, the closing SMS went to the Twilio number and was logged
+    as failed (2026-09-13). Inbound and unknown directions keep `From`.
+    """
+    if direction.startswith("outbound") and to_number:
+        return to_number
+    return from_number
 
 
 def _twiml_response(body: str) -> Response:
@@ -255,17 +285,34 @@ def create_app(
     *,
     public_wss_url: str,
     artifact_dir: Path,
+    recording_dir: Path | None = None,
+    inbound_gain: float = 1.0,
     clock: Callable[[], datetime] = _utc_now,
     pending_ttl_s: float = 60.0,
 ) -> FastAPI:
-    """Flow: build the app, register the endpoints, hand it back."""
+    """Flow: build the app, register the endpoints, hand it back.
+
+    `recording_dir`, when given, receives `{CallSid}.caller.wav` and
+    `{CallSid}.model.wav` for every call (owner request 2026-09-13). Written once
+    at teardown, so the bucket mount is a safe target. Created eagerly for the
+    same reason `TimingRecorder` creates its directory: a missing directory
+    should fail here, not at the end of a real call.
+
+    `inbound_gain` is the linear lift applied to caller audio before it reaches
+    Gemini (`decana.bridge.gain`, owner request 2026-09-13). 1.0 is a no-op,
+    which is what every test that does not care about level gets.
+    """
     app = FastAPI()
     registry: dict[str, _Pending] = {}
+    if recording_dir is not None:
+        recording_dir.mkdir(parents=True, exist_ok=True)
 
     @app.post("/voice")
     async def voice(
         call_sid: Annotated[str, Form(alias="CallSid")],
-        caller: Annotated[str, Form(alias="From")],
+        from_number: Annotated[str, Form(alias="From")],
+        to_number: Annotated[str, Form(alias="To")] = "",
+        direction: Annotated[str, Form(alias="Direction")] = "",
     ) -> Response:
         """Flow: open the session, register it, answer with the TwiML.
 
@@ -274,10 +321,15 @@ def create_app(
         does not exist while `<Say>` is playing, and this is the only code that
         runs during the disclosure. See S3-Q1.
 
-        Both fields are REQUIRED, so a malformed webhook is a 422 rather than a
-        session registered under the empty string -- where two of them would
-        collide on one key and the second would close the first.
+        `CallSid` and `From` are REQUIRED, so a malformed webhook is a 422 rather
+        than a session registered under the empty string -- where two of them
+        would collide on one key and the second would close the first. `To` and
+        `Direction` are optional and only re-point the caller on outbound calls
+        (`resolve_caller`).
         """
+        caller = resolve_caller(
+            from_number=from_number, to_number=to_number, direction=direction
+        )
         now = clock()
         await _sweep_expired(registry, now=now, ttl_s=pending_ttl_s)
 
@@ -385,6 +437,14 @@ def create_app(
         """Assemble one call's collaborators. No I/O, no task creation."""
         timing_path = artifact_dir / f"{call_sid}.jsonl"
         sender = _SocketSender(stream_sid)
+        recorder = (
+            None
+            if recording_dir is None
+            else CallRecorder(
+                caller_path=recording_dir / f"{call_sid}.caller.wav",
+                model_path=recording_dir / f"{call_sid}.model.wav",
+            )
+        )
         return _Call(
             call_sid=call_sid,
             stream_sid=stream_sid,
@@ -398,6 +458,8 @@ def create_app(
                 timing=TimingRecorder(clock=clock, sink_path=timing_path),
                 inbound=inbound_resampler(),
                 outbound=outbound_resampler(),
+                recorder=recorder,
+                inbound_gain=inbound_gain,
             ),
             sender=sender,
             started_at=now,

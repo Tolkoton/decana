@@ -19,6 +19,188 @@ Categories follow Trajectory-Informed Memory Generation (arXiv 2603.10600):
 - **optimization** — inefficient pattern worth flagging next time
 - **none** — routine entry, no pattern of note
 
+## 2026-09-12T08:00:00Z — architecture — ADR-0001 FALSIFIER RESOLVED (browser read)
+- Trigger: owner asked for the one thing that unblocks ratification -- read the Vertex
+  supported-locations table in a browser, since the doc fetcher returns navigation shells
+- Evidence: model page `.../models/gemini/2-5-flash-live-api` ("Supported regions"); Data
+  residency page (verbatim UK-exclusion note); Deployments-and-endpoints page multi-region
+  table (read visually, checkmarks are not in the text layer)
+- Action: resolved the falsifier in `docs/adr/0001-caller-data-residency.md`. The answer
+  CHANGED the decision. Corrected option B's stale "indications are / if true" wording.
+- Category: strategy
+
+### The answer, and it is not the comfortable one
+1. **The Live model is NOT served in `europe-west2`.** Verbatim from the model's own page:
+   Europe = europe-central2, europe-north1, europe-southwest1, europe-west1, europe-west4,
+   europe-west8. Six regions; London is not one. Plain text, not an inferred checkmark.
+2. **The EU multi-region endpoint EXPLICITLY EXCLUDES THE UK.** Verbatim: "Geographies
+   outside the European Union political boundary, including the United Kingdom and
+   Switzerland, are excluded from this endpoint." This was not anticipated by anyone and it
+   is the finding that matters most -- post-Brexit, the EU multi-region is the wrong
+   instrument for a UK product.
+3. **The residency table gives this model no UK commitment.** Read visually: the Live row
+   has ticks in the first two columns only and is blank across every country column, UK
+   included, while `gemini-2.5-flash` below it is ticked across. The blank is meaningful.
+4. **Locational endpoints DO meet GDPR** -- verbatim, and it softens the endpoints page's
+   "endpoints don't guarantee residency" callout. So a locational endpoint in a SERVED EU
+   region gives in-jurisdiction ML processing.
+
+**Consequence: option B/C buys EU jurisdiction, NOT UK.** UK in-country processing of the
+audio leg is unavailable by either route. The owner's leaning was reasonable and is wrong
+about what it purchases -- which is exactly why this was worth reading rather than assuming.
+If the product claims "UK-hosted", that is now a product/marketing decision.
+
+### A discrepancy between two Google pages, flagged NOT resolved
+The Deployments-and-endpoints multi-region table shows the Live model with NO US/EU
+multi-region availability; the Data residency table shows it WITH both. The two disagree. A
+plausible reading is endpoint-invocability vs ML-processing-commitment, but that is a GUESS
+and the ADR says so. It does not affect the conclusion -- both agree the UK column is empty
+and the model page independently excludes `europe-west2`. Recorded so nobody later
+"resolves" it by picking the table that suits them.
+
+### Two incidental findings worth having
+- `gemini-live-2.5-flash-native-audio` has a **retirement date of 2026-12-13**. Both profiles
+  pin it. Nothing in the repo recorded that it is a dated dependency.
+- The model caps a session at **10 minutes by default** ("can be extended"), independent of
+  the Cloud Run 3600 s request timeout. Fine for scripted S7 calls; relevant the first time a
+  real caller talks longer.
+
+## 2026-09-12T07:00:00Z — architecture — ADR-0001 DRAFTED (residency), gates S7
+- Trigger: owner instruction to record caller-data residency as an open architectural
+  decision, gating S7 rather than S6
+- Evidence: `docs/adr/0001-caller-data-residency.md`; gate placed in `docs/deploy.md`
+  steps 6d/6e AND in `vertical-profile-bridge.md` row 7b
+- Action: drafted the ADR as PROPOSED, owner-ratification-pending. Pinned
+  `SERVICE_NAME=decana-voice`. Did NOT migrate to Vertex -- explicit owner instruction.
+- Category: strategy
+
+### The ADR found a THIRD leg the framing did not include
+The residency question was raised about Gemini. Walking every hop the caller's data takes
+found five, and hop 3 was not in anyone's framing: **the operator email's body IS the brief**
+(`dispatch.py:122` renders it via `render_brief`), and the brief contains
+`analysis.summary` -- a summary of what the caller said. So the SMTP provider choice is part
+of this decision, not separate from it, and a US-hosted relay would reintroduce the exact
+problem through a door nobody was watching. That matters right now because the owner is
+mid-way through asking which SMTP provider to use.
+
+Hop 5 (`DECANA_ARTIFACT_DIR`, the transcript/brief files on instance disk) is already
+correct as a side effect of the `europe-west2` pin -- London.
+
+### Option B's cost is larger than "change the client construction"
+Enumerated in the ADR, because the owner's leaning is B/C and the cost should be visible
+before ratification, not after:
+- Vertex authenticates via ADC/service account, not an API key -- so `Settings.gemini_api_key`
+  (currently REQUIRED, exit 2 if absent) changes shape, and S6's Secret Manager wiring with it.
+- Both profiles' `live_model` change: Vertex's native-audio Live model is named differently
+  from `gemini-2.5-flash-native-audio-preview-12-2025`.
+- **It re-opens S2's and S3's latency premises under Article 8.** The 3229 ms and 3128 ms
+  measurements were taken against the Developer API; a different endpoint plus a possible
+  cross-region hop invalidates both as evidence for A3's <=3000 ms bound -- and A3 is what
+  the feature is judged on.
+- It interacts with the `europe-west2` pin, possibly collapsing B into C (new URL, Twilio
+  re-point) -- cheap now, expensive after S7.
+
+### The falsifier is named and the ADR must not be ratified without it
+Whether Vertex's native-audio Live model serves `europe-west2` is ASSUMED, not verified --
+the Vertex locations and Live reference pages return navigation shells to a fetcher. The ADR
+says so in its own body and names the resolution: read the supported-locations table in a
+BROWSER. That single reading decides whether B collapses into C.
+
+### Gate placement, per the lesson from S5's Phase 5
+The gate is written into `vertical-profile-bridge.md` row 7b as well as the deploy doc,
+because S7 is explicitly "not routed through slice-planner/slice-builder" -- a gate recorded
+only where the agent looks is a gate recorded nowhere. Same failure a critic caught when this
+session ASSERTED an S7 handoff it had never made.
+
+## 2026-09-12T06:00:00Z — deploy (S6) — REGION_PINNED europe-west2
+- Trigger: owner asked to verify Gemini Live proximity before pinning, since the region
+  fixes the service URL and re-pointing Twilio is the cost of a wrong choice
+- Evidence: `gemini/live.py:356`, `analysis/gemini_client.py:34` (both
+  `genai.Client(api_key=...)`, no vertexai/location); grep of `src/`+`scripts/` for any
+  region parameter -> none; https://ai.google.dev/gemini-api/docs/available-regions
+- Action: pinned `europe-west2` in `docs/deploy.md`. Recorded the residency flag separately.
+- Category: strategy
+
+### The premise did not hold, and that IS the finding
+The worry was that a London Cloud Run region could add a per-chunk round-trip to Gemini and
+lose more than Twilio proximity gains. Correct question; it does not bind here.
+
+**This project is on the Gemini DEVELOPER API, not Vertex AI.** There is no region parameter
+to set — and the Developer API's "available regions" page is COUNTRY ELIGIBILITY, not a list
+of selectable serving endpoints. `generativelanguage.googleapis.com` is one global endpoint
+reached via Google's edge, so **Cloud Run region does not select a Gemini serving location**
+and the latency-critical leg is region-independent. The tiebreak therefore falls to the
+one-time Twilio setup leg, which favours London.
+
+### Confidence levels, kept separate on purpose
+- **VERIFIED** (code + primary doc): Developer API in use, no region parameter exists,
+  "available regions" is eligibility not endpoints.
+- **ASSUMED, not verified**: that Vertex's native-audio Live API serves `europe-west1`/
+  `west4`/`north1` and NOT `europe-west2`. The Vertex locations and Live reference pages
+  return navigation shells to a fetcher; this came from a search summary and a dev-forum
+  thread, not a quoted table. Falsifier named in the doc: read the table in a browser.
+  Flagged because IF a Vertex migration happens, `europe-west1` probably wins and switching
+  later costs a new URL plus a Twilio re-point.
+
+### Raised, not settled: transcripts have no region control
+The global endpoint means nothing constrains where UK callers' transcripts are processed.
+This is a regulated context by the feature's own design (`disclosure.md`,
+`compliance_notes`), so the mismatch deserves a deliberate decision. Not S6-blocking, not
+the agent's call, and harder to reverse once real client calls exist — so it is on the
+record before the first real call. Vertex AI with an EU region is the lever if the answer
+is "unacceptable".
+
+## 2026-09-12T05:00:00Z — deploy (S6) — DOCS_AND_DOCKERFILE_WRITTEN
+- Trigger: owner request for `docs/deploy.md` before provisioning GCP credentials
+- Evidence: `docs/deploy.md`, `Dockerfile`, `.dockerignore`, `.claude/settings.json` (+2 ask
+  entries). Install method and every gcloud flag verified against current docs, not memory.
+- Action: wrote S6's non-credential deliverables. Owner runs every command; agent ran none.
+- Category: strategy
+
+### Contract confirmed before writing, as asked
+Edge S3 -> S6 verbatim: Cloud Run, `min-instances=1`, `max-instances=1`,
+`--session-affinity`, timeout >= 3600 s, secrets from Secret Manager into env,
+`PUBLIC_WSS_URL = wss://<service-url>`, webhook -> `https://<service-url>/voice`. Nothing in
+the contract contradicts "the Ubuntu box is only where gcloud runs from".
+
+### The Dockerfile was MISSING and is also an S6 deliverable
+The owner asked only for the doc. But S6's deliverables are `Dockerfile`,
+`cloudrun.yaml`/deploy script AND `docs/deploy.md`, and Order row 4's gate literally opens
+"Dockerfile builds". No Dockerfile existed. A deploy guide whose build step referenced
+nothing would have been the same "asserting a handoff that never landed" failure caught in
+S5's Phase 5. Written, with `.dockerignore`.
+
+### Verified against current docs rather than recalled
+- The canonical install host has MOVED: `cloud.google.com/sdk/docs/install` 301s to
+  `docs.cloud.google.com/sdk/docs/install`. `apt-key` is deprecated; current method is
+  `gpg --dearmor` to a keyring plus `signed-by`. Package: `google-cloud-cli`.
+- Flags confirmed spelled `--min-instances` / `--max-instances` (not `--min`/`--max`),
+  `--session-affinity`, `--timeout`, `--set-secrets ENV=SECRET:VERSION`, `--set-env-vars`,
+  `--allow-unauthenticated`, `--source`.
+- **A WebSocket IS an HTTP request to Cloud Run and is subject to the request timeout** —
+  default 300 s, documented maximum 3600 s. The contract's ">= 3600" is therefore exactly
+  the ceiling, not a loose lower bound. A call is cut at the timeout whatever the app does.
+- Four APIs needed: `run`, `secretmanager`, `cloudbuild`, `artifactregistry` — the last two
+  because a source deploy builds via Cloud Build and stores images in an auto-created
+  `cloud-run-source-deploy` repo, which accrues storage cost per deploy.
+
+### Cross-checked the doc against the code it describes
+The 8 `gcloud secrets create` names in the doc are EXACTLY the 8 credentials
+`Settings.from_env` reads — diffed programmatically, not eyeballed. Also confirmed: `PORT`
+is read and never hardcoded; uvicorn already binds `0.0.0.0` (a localhost bind would have
+failed on Cloud Run); `f"{public_wss_url}/media"` at `server.py:228` is what makes the
+no-trailing-slash warning real.
+
+### `gcloud` added to ASK, not allow
+Two entries (`Bash(gcloud:*)`, `Bash(gcloud)`) beside `docker push:*`. Ask rather than allow
+was the owner's explicit instruction: every gcloud call should be a deliberate prompt, not
+swept up by the generic unclassified-command catch. `allow` contains a bare `Bash`, so
+without an ask entry gcloud would have run unprompted.
+
+### Open for the owner — two values the doc needs and I did not invent
+`<GCP_REGION>` (step 2b) and `<SMTP_HOST>`/`<SMTP_PORT>` (step 3). Left as marked
+placeholders rather than guessed; the owner said they would supply them on request.
+
 ## 2026-09-12T04:00:00Z — dispatch (S5) — CROSS_SLICE_VOCABULARY_CHECK
 - Trigger: owner request after the smoke exposed that 314 unit tests ran against a
   fabricated outcome vocabulary

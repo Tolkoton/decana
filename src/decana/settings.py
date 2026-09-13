@@ -65,6 +65,16 @@ class Settings:
     artifact_dir: Path
     port: int
 
+    # Where S3 appends the per-chunk `{call_sid}.jsonl` timing log. Defaults to
+    # `artifact_dir`, so a local run sees no change. It exists because the two
+    # write patterns need different storage: dispatch writes three files per
+    # call and belongs in a durable bucket; the timing log appends many times a
+    # second and MUST stay on local disk. On the first Cloud Run test with a
+    # Cloud Storage FUSE mount as `artifact_dir` (2026-09-13) every append
+    # rewrote the object, GCS answered 429, the blocked writes stalled the
+    # server, and the next webhook returned 502.
+    timing_dir: Path = Path(".")
+
     # Optional-until-present (S5-Q9). Ratified so the tracer build never requires
     # secrets it does not use; S5 reads them and degrades per GROUP, never globally.
     twilio_account_sid: str | None = None
@@ -109,6 +119,7 @@ class Settings:
         variable is missing" must not do to its own runner.
         """
         env = os.environ if env is None else env
+        artifact_dir = Path(env.get("DECANA_ARTIFACT_DIR") or _DEFAULT_ARTIFACT_DIR)
         return Settings(
             profile_name=_require(env, "DECANA_PROFILE"),
             gemini_api_key=_require(env, "GEMINI_API_KEY"),
@@ -116,8 +127,9 @@ class Settings:
             profiles_root=Path(
                 env.get("DECANA_PROFILES_ROOT") or _repo_profiles_root()
             ),
-            artifact_dir=Path(env.get("DECANA_ARTIFACT_DIR") or _DEFAULT_ARTIFACT_DIR),
+            artifact_dir=artifact_dir,
             port=int(env.get("PORT") or _DEFAULT_PORT),
+            timing_dir=Path(env.get("DECANA_TIMING_DIR") or artifact_dir),
             twilio_account_sid=env.get("TWILIO_ACCOUNT_SID"),
             twilio_auth_token=env.get("TWILIO_AUTH_TOKEN"),
             smtp_host=env.get("SMTP_HOST"),

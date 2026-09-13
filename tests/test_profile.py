@@ -70,8 +70,15 @@ def _good_data() -> dict[str, Any]:
         "gemini": {
             "live_model": "gemini-2.5-flash-native-audio-preview-12-2025",
             "analysis_model": "gemini-2.5-flash",
+            "voice": "Kore",
+            "accent": "Speak British English with a natural British accent.",
         },
-        "twilio": {"phone_number": "+441234567890", "sms_sender_id": "Decana"},
+        "twilio": {
+            "phone_number": "+441234567890",
+            "sms_sender_id": "Decana",
+            "say_voice": "Polly.Amy-Neural",
+            "say_language": "en-GB",
+        },
         "operator": {"email": "ops@example.com"},
         "outcomes": {"allowed": ["new_client", "not_qualified", "callback"]},
         "sms": {
@@ -214,16 +221,24 @@ _REQUIRED_SCALARS = [
     ("vertical", "name", "vertical.name"),
     ("gemini", "live_model", "gemini.live_model"),
     ("gemini", "analysis_model", "gemini.analysis_model"),
+    ("gemini", "voice", "gemini.voice"),
+    ("gemini", "accent", "gemini.accent"),
     ("twilio", "phone_number", "twilio.phone_number"),
     ("twilio", "sms_sender_id", "twilio.sms_sender_id"),
+    ("twilio", "say_voice", "twilio.say_voice"),
+    ("twilio", "say_language", "twilio.say_language"),
     ("operator", "email", "operator.email"),
 ]
 _SCALAR_IDS = {
     "vertical.name": "vertical_name",
     "gemini.live_model": "live_model",
     "gemini.analysis_model": "analysis_model",
+    "gemini.voice": "live_voice",
+    "gemini.accent": "live_accent",
     "twilio.phone_number": "phone_number",
     "twilio.sms_sender_id": "sms_sender_id",
+    "twilio.say_voice": "say_voice",
+    "twilio.say_language": "say_language",
     "operator.email": "operator_email",
 }
 
@@ -798,7 +813,16 @@ _SHIPPED = ("mortgage-broker", "eco-consultant")
 # The two model names may legitimately coincide across verticals, and `name` is
 # the argument rather than profile content, so all three are excluded from the
 # differs-loop. Everything else on Profile must differ.
-_MAY_COINCIDE = {"name", "live_model", "analysis_model"}
+_MAY_COINCIDE = {
+    "name",
+    "live_model",
+    "analysis_model",
+    "say_language",
+    "live_accent",
+}
+# The <Say> language and the accent instruction may coincide because both shipped
+# verticals are UK products and therefore both `en-GB` and both British; the two
+# voices must still differ, and do.
 
 
 def test_shipped_profiles_load() -> None:
